@@ -7,15 +7,6 @@
 
 <br>
 
-## 📸 미리보기
-
-<!-- 스크린샷이나 GIF를 여기에 넣어주세요 -->
-<!-- ![preview](./docs/preview.gif) -->
-
-🔗 **배포 주소**: <!-- https://your-deploy-url.com -->
-
-<br>
-
 ## ✨ 주요 기능
 
 - **라운드 진행** – 한 라운드에 5문장, 진행도 표시 · 다음 문장 미리보기 · `Esc`로 처음부터
@@ -117,14 +108,3 @@ const [isComposing, setIsComposing] = useState(false);
 한글 타수는 글자 수가 아니라 **실제로 누른 키 개수**로 셉니다.
 완성형 한글을 초성 · 중성 · 종성으로 분해해서 `가` = 2타, `한` = 3타, `왔` = 4타(ㅇ+ㅗ+ㅏ+ㅆ)처럼 계산합니다. (`utils/calculate.js`의 `countStrokes`)
 
-<br>
-
-## 📝 회고
-
-<!-- 만들면서 어려웠던 점, 배운 점을 적어주세요 -->
-
-<br>
-
-## 👤 만든 사람
-
-- GitHub: [@gaeuns](https://github.com/gaeuns)
