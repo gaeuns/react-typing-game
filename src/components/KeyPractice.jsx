@@ -58,7 +58,11 @@ export default function KeyPractice({ mode, stage, disabled, onStageChange, onFi
     setPos(nextPos);
     if (nextPos === keys.length) {
       const time = timer.stop();
-      onFinish({ speed: calcSpeed(nextCorrect, time), accuracy: calcAccuracy(nextCorrect, nextPresses), time });
+      onFinish({
+        speed: calcSpeed(nextCorrect, time, { final: true }),
+        accuracy: calcAccuracy(nextCorrect, nextPresses),
+        time,
+      });
     }
   };
 

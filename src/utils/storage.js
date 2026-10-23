@@ -16,11 +16,12 @@ export function getBest(key) {
   return readAll()[key] ?? null;
 }
 
-/** 새 기록이 최고 기록이면 저장하고 true를 돌려준다. */
+/** 새 기록이 최고 기록이면 저장하고 true를 돌려준다. (타수가 같으면 정확도가 더 높아야 최고 기록) */
 export function saveIfBest(key, record) {
   const all = readAll();
   const prev = all[key];
-  if (prev && prev.speed >= record.speed) return false;
+  const isBetter = !prev || record.speed > prev.speed || (record.speed === prev.speed && record.accuracy > prev.accuracy);
+  if (!isBetter) return false;
 
   all[key] = { ...record, date: new Date().toISOString() };
   try {

@@ -29,7 +29,8 @@ const KO_SHIFT = { KeyQ: 'ㅃ', KeyW: 'ㅉ', KeyE: 'ㄸ', KeyR: 'ㄲ', KeyT: '�
 const SYMBOLS = {
   Digit1: ['1', '!'], Digit2: ['2', '@'], Digit3: ['3', '#'], Digit4: ['4', '$'], Digit5: ['5', '%'],
   Digit6: ['6', '^'], Digit7: ['7', '&'], Digit8: ['8', '*'], Digit9: ['9', '('], Digit0: ['0', ')'],
-  Minus: ['-', '_'], Semicolon: [';', ':'], Quote: ["'", '"'], Comma: [',', '<'], Period: ['.', '>'], Slash: ['/', '?'],
+  Minus: ['-', '_'], Equal: ['=', '+'], BracketLeft: ['[', '{'], BracketRight: [']', '}'], Backslash: ['\\', '|'],
+  Backquote: ['`', '~'], Semicolon: [';', ':'], Quote: ["'", '"'], Comma: [',', '<'], Period: ['.', '>'], Slash: ['/', '?'],
 };
 
 /** 키 코드 → 화면에 보일 글자 */
@@ -66,14 +67,18 @@ export function keyForStroke(stroke) {
 
 // 키마다 맡는 손가락 (L5 = 왼손 새끼 … R5 = 오른손 새끼, T = 엄지)
 const FINGERS = {
-  L5: ['Digit1', 'KeyQ', 'KeyA', 'KeyZ', 'ShiftLeft'],
+  L5: ['Backquote', 'Digit1', 'KeyQ', 'KeyA', 'KeyZ', 'ShiftLeft'],
   L4: ['Digit2', 'KeyW', 'KeyS', 'KeyX'],
   L3: ['Digit3', 'KeyE', 'KeyD', 'KeyC'],
   L2: ['Digit4', 'Digit5', 'KeyR', 'KeyT', 'KeyF', 'KeyG', 'KeyV', 'KeyB'],
   R2: ['Digit6', 'Digit7', 'KeyY', 'KeyU', 'KeyH', 'KeyJ', 'KeyN', 'KeyM'],
   R3: ['Digit8', 'KeyI', 'KeyK', 'Comma'],
   R4: ['Digit9', 'KeyO', 'KeyL', 'Period'],
-  R5: ['Digit0', 'Minus', 'Backspace', 'KeyP', 'Semicolon', 'Quote', 'Slash', 'ShiftRight'],
+  R5: [
+    'Digit0', 'Minus', 'Equal', 'Backspace',
+    'KeyP', 'BracketLeft', 'BracketRight', 'Backslash',
+    'Semicolon', 'Quote', 'Slash', 'ShiftRight',
+  ],
   T: ['Space'],
 };
 const FINGER_OF = Object.fromEntries(

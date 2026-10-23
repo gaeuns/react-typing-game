@@ -25,7 +25,7 @@ export default function TypingBoard({
     <section className="board" onClick={onClick}>
       {title && <p className="board__title">{title}</p>}
 
-      <p className="board__sentence" aria-label={target}>
+      <p className="board__sentence" aria-label={target} style={{ '--units': widthUnits(target) }}>
         {target.split('').map((char, i) => {
           let state = 'pending';
           if (i < input.length) {
@@ -56,7 +56,7 @@ export default function TypingBoard({
       {upcoming.length > 0 && upcomingLayout === 'inline' && (
         <p className="board__next">
           <span className="pill-label">다음</span>
-          <span className="board__next-words">{upcoming.join('  ·  ')}</span>
+          <span className="board__next-text board__next-words">{upcoming.join('  ·  ')}</span>
         </p>
       )}
 
@@ -67,7 +67,7 @@ export default function TypingBoard({
             <span className={`pill-label ${i > 0 ? 'is-blank' : ''}`} aria-hidden={i > 0}>
               다음
             </span>
-            {line}
+            <span className="board__next-text">{line}</span>
           </p>
         ))}
     </section>
@@ -80,4 +80,14 @@ export default function TypingBoard({
  */
 function isOnTrack(char, target, i) {
   return isPrefix(toKeystrokes(char), toKeystrokes(target.slice(i, i + 2)));
+}
+
+/**
+ * 문장이 고정폭 글꼴로 몇 em 너비인지 — 한글 같은 전각 글자는 1em, 영문 · 숫자 · 문장부호는 0.5em
+ * (+ 글자 간격 0.04em). CSS가 이 값으로 글자 크기를 줄여 긴 문장도 한 줄에 들어가게 한다.
+ */
+function widthUnits(text) {
+  let units = 0;
+  for (const char of text) units += (char.codePointAt(0) >= 0x1100 ? 1 : 0.5) + 0.04;
+  return Math.max(units * 1.03, 1); // 반올림 오차로 마지막 글자가 넘어가지 않게 약간 여유
 }
