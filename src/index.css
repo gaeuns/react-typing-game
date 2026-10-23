@@ -560,6 +560,7 @@ kbd {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   cursor: text;
+  container-type: inline-size; /* 문장 글자 크기를 판 너비(cqi)에 맞추려고 */
 }
 
 .board__sentence {
@@ -573,7 +574,8 @@ kbd {
     var(--rule) var(--line-height)
   );
   font-family: var(--font-type);
-  font-size: clamp(1.5rem, 3.2vw, 2.25rem);
+  /* 문장 전체가 판 너비에 한 줄로 들어가는 크기 (--units: TypingBoard의 widthUnits) — 너무 작아지면 줄을 넘긴다 */
+  font-size: clamp(1.1rem, calc(100cqi / var(--units, 20)), 2.25rem);
   line-height: var(--line-height);
   letter-spacing: 0.04em;
   word-break: keep-all;
@@ -641,6 +643,14 @@ kbd {
   color: var(--ink-soft);
 }
 
+/* 미리보기는 길어도 한 줄 — 넘치면 말줄임 */
+.board__next-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .board__title {
   margin: 0 0 4px;
   font-size: 0.8rem;
@@ -655,7 +665,7 @@ kbd {
 
 .board__next-words {
   font-family: var(--font-type);
-  white-space: pre-wrap;
+  white-space: pre; /* 낱말 사이 공백 유지 */
 }
 
 .pill-label.is-blank {
@@ -1031,6 +1041,11 @@ kbd {
   .board {
     --line-height: 44px;
     padding: 20px;
+  }
+
+  /* 아주 긴 줄도 두 줄 안에 들어가게 최소 글자 크기를 조금 더 낮춘다 */
+  .board__sentence {
+    font-size: clamp(1rem, calc(100cqi / var(--units, 20)), 2.25rem);
   }
 
   .char--cursor::after {

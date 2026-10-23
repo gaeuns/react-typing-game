@@ -47,9 +47,12 @@ export function compareInput(target, input, isComposing) {
   return { correctChars, correctStrokes, typedChars: judgedLength };
 }
 
-/** 분당 타수 */
-export function calcSpeed(strokes, elapsedMs) {
-  if (elapsedMs < 1000) return 0; // 시작 직후 숫자가 튀는 것 방지
+/**
+ * 분당 타수 — 진행 중에는 시작 직후 숫자가 튀지 않게 1초 전까지 0,
+ * 끝난 판(final)은 1초 안에 끝났어도 실제 시간으로 계산한다.
+ */
+export function calcSpeed(strokes, elapsedMs, { final = false } = {}) {
+  if (elapsedMs <= 0 || (!final && elapsedMs < 1000)) return 0;
   return Math.round(strokes / (elapsedMs / 60000));
 }
 

@@ -187,7 +187,7 @@ export default function App() {
 
     const time = timer.stop();
     finishRound({
-      speed: calcSpeed(nextTotals.correctStrokes, time),
+      speed: calcSpeed(nextTotals.correctStrokes, time, { final: true }),
       accuracy: calcAccuracy(nextTotals.correctChars, nextTotals.typedChars),
       time,
     });
