@@ -11,7 +11,7 @@ import { formatTime } from '../utils/calculate';
 const KEY_GUARD_MS = 400; // 뜨자마자 들어온 키(마지막 글자 확정용 Enter 등)는 무시
 
 export default function ResultModal({ result, title, nextLabel, onRestart, onNext }) {
-  const { speed, accuracy, time, isBest, prevBest } = result;
+  const { speed, accuracy, time, isBest, prevBest, implausible } = result;
   const diff = prevBest ? speed - prevBest.speed : null;
 
   const dialogRef = useRef(null);
@@ -59,7 +59,10 @@ export default function ResultModal({ result, title, nextLabel, onRestart, onNex
             <span className="modal__speed">{speed}</span>
             <span className="modal__unit">타/분</span>
           </div>
-          {diff !== null && (
+          {implausible && (
+            <p className="modal__note">사람이 칠 수 없는 속도라 최고 기록에는 저장하지 않았어요.</p>
+          )}
+          {!implausible && diff !== null && (
             <p className={`modal__diff ${diff >= 0 ? 'is-up' : 'is-down'}`}>
               이전 최고 기록보다 {diff >= 0 ? `+${diff}` : diff}타
             </p>
