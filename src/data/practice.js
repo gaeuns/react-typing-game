@@ -91,6 +91,11 @@ const PASSAGES = {
   ],
 };
 
+/** 게임에서 쓰는 낱말 목록 */
+export function wordsFor(mode) {
+  return WORDS[mode];
+}
+
 export const PRACTICE_KINDS = [
   { id: 'keys', label: '자리 연습', unit: '키' },
   { id: 'words', label: '낱말 연습', unit: '낱말' },

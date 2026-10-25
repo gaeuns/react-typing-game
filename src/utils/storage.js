@@ -31,3 +31,36 @@ export function saveIfBest(key, record) {
   }
   return true;
 }
+
+// ─── 게임 최고 점수 ─────────────────────────────────────────────
+
+const GAME_KEY = 'tadak:games';
+
+function readGames() {
+  try {
+    return JSON.parse(localStorage.getItem(GAME_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+/** key: `${게임}:${언어}` — { score, level, date } */
+export function getGameBest(key) {
+  return readGames()[key] ?? null;
+}
+
+/** 점수가 최고 점수보다 높으면 저장하고 true를 돌려준다. (0점 판은 저장하지 않는다) */
+export function saveGameBest(key, record) {
+  if (record.score <= 0) return false;
+  const all = readGames();
+  const prev = all[key];
+  if (prev && prev.score >= record.score) return false;
+
+  all[key] = { ...record, date: new Date().toISOString() };
+  try {
+    localStorage.setItem(GAME_KEY, JSON.stringify(all));
+  } catch {
+    // 저장 실패는 무시
+  }
+  return true;
+}

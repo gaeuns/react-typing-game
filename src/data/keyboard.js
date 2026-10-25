@@ -8,10 +8,13 @@ export const LETTER_ROWS = [
   ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM'],
 ];
 
-// 화면 키보드에 그리는 전체 줄 (숫자 · 문장부호 · Shift · 스페이스 포함)
+// 화면 키보드에 그리는 전체 줄 (숫자 · 문장부호 · Shift · 스페이스 포함) — 실제 키보드와 같은 배열
 export const KEYBOARD_ROWS = [
-  ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Backspace'],
-  LETTER_ROWS[0],
+  [
+    'Backquote', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6',
+    'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal', 'Backspace',
+  ],
+  [...LETTER_ROWS[0], 'BracketLeft', 'BracketRight', 'Backslash'],
   [...LETTER_ROWS[1], 'Semicolon', 'Quote'],
   ['ShiftLeft', ...LETTER_ROWS[2], 'Comma', 'Period', 'Slash', 'ShiftRight'],
   ['Space'],
