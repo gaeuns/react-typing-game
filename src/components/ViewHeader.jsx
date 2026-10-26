@@ -1,13 +1,23 @@
+import { useState } from 'react';
+import { isSoundOn, setSoundOn } from '../utils/sound';
+
 const MODES = [
   { id: 'ko', label: '한글' },
   { id: 'en', label: 'English' },
 ];
 
 /**
- * 연습 · 게임 화면 공통 머리줄 — 최고 기록 칩 + 언어 토글.
+ * 연습 · 게임 화면 공통 머리줄 — 최고 기록 칩 + 효과음 켜고 끄기 + 언어 토글.
  * 좁은 화면에선 사이드바가 숨으므로 메뉴 버튼과 로고를 여기서 보여준다.
  */
 export default function ViewHeader({ bestLabel, bestText, mode, onModeChange, onOpenNav }) {
+  const [sound, setSound] = useState(isSoundOn);
+
+  const toggleSound = () => {
+    setSoundOn(!sound);
+    setSound(!sound);
+  };
+
   return (
     <header className="header">
       <div className="header__start">
@@ -28,6 +38,18 @@ export default function ViewHeader({ bestLabel, bestText, mode, onModeChange, on
             {bestLabel} 최고 <strong>{bestText ?? '아직 없음'}</strong>
           </span>
         )}
+
+        <button
+          type="button"
+          className={`sound-btn ${sound ? '' : 'is-off'}`}
+          onMouseDown={(e) => e.preventDefault()} // 눌러도 입력창 포커스 그대로
+          onClick={toggleSound}
+          aria-pressed={sound}
+          aria-label="키 입력 효과음"
+          title={sound ? '효과음 끄기' : '효과음 켜기'}
+        >
+          <span aria-hidden="true">{sound ? '🔊' : '🔇'}</span>
+        </button>
 
         <div className="mode-toggle" role="tablist" aria-label="언어 선택">
           {MODES.map((m) => (

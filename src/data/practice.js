@@ -1,5 +1,5 @@
 // 낱말 · 장문 연습 데이터와, 연습 종류별로 한 판 분량을 뽑는 함수.
-import { pickSentences } from './sentences';
+import { SENTENCES, pickSentences } from './sentences';
 
 const WORDS = {
   ko: [
@@ -96,14 +96,17 @@ export function wordsFor(mode) {
   return WORDS[mode];
 }
 
+// short: 좁은 화면 탭에 쓰는 짧은 이름
 export const PRACTICE_KINDS = [
-  { id: 'keys', label: '자리 연습', unit: '키' },
-  { id: 'words', label: '낱말 연습', unit: '낱말' },
-  { id: 'short', label: '단문 연습', unit: '문장' },
-  { id: 'long', label: '장문 연습', unit: '줄' },
+  { id: 'keys', label: '자리 연습', short: '자리', unit: '키' },
+  { id: 'words', label: '낱말 연습', short: '낱말', unit: '낱말' },
+  { id: 'short', label: '단문 연습', short: '단문', unit: '문장' },
+  { id: 'long', label: '장문 연습', short: '장문', unit: '줄' },
+  { id: 'timed', label: '60초 연습', short: '60초', unit: '문장' },
 ];
 
 export const WORDS_PER_ROUND = 20;
+export const TIMED_MS = 60 * 1000; // 60초 연습 제한 시간
 
 function shuffle(list) {
   const pool = [...list];
@@ -117,10 +120,20 @@ function shuffle(list) {
 /**
  * 한 판 분량 — { title, items }
  * 낱말: 무작위 20개 / 단문: 무작위 5문장 / 장문: 작품 하나를 줄 단위로 (excludeTitle과 다른 작품으로)
+ * 60초: 단문을 세 바퀴 섞어 이어 붙인다 — 60초 안에 다 칠 수 없을 만큼
  * (자리 연습은 KeyPractice가 따로 뽑는다)
  */
 export function pickRound(kind, mode, excludeTitle = null) {
   if (kind === 'words') return { title: null, items: shuffle(WORDS[mode]).slice(0, WORDS_PER_ROUND) };
+  if (kind === 'timed') {
+    const items = [];
+    while (items.length < SENTENCES[mode].length * 3) {
+      const lap = shuffle(SENTENCES[mode]);
+      if (lap[0] === items[items.length - 1]) lap.push(lap.shift()); // 바퀴가 바뀔 때 같은 문장이 연달아 나오지 않게
+      items.push(...lap);
+    }
+    return { title: null, items };
+  }
   if (kind === 'long') {
     const others = PASSAGES[mode].filter((p) => p.title !== excludeTitle);
     const passage = shuffle(others.length ? others : PASSAGES[mode])[0];

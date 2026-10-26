@@ -22,6 +22,7 @@ import { widthUnits } from '../utils/textWidth';
 
 const ROUND_SECONDS = 45; // 시간이 다 되면 밧줄이 내 쪽에 있어야 승리
 const CHOICES = 3; // 동시에 보여 주는 낱말 수 — 아무거나 쳐도 된다
+const MIN_CHOICE_UNITS = 3.5; // 폰에서 짧은 낱말 칸도 이만큼은 넓게 (글자 폭 단위)
 const MAX_ITEMS = 3;
 const ITEM_WORD_CHANCE = 0.18; // 새 낱말이 아이템 낱말(금색)일 확률
 const POWER_SECONDS = 6;
@@ -315,7 +316,11 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
 
         <div className={`tug-choices ${inked ? 'is-inked' : ''}`}>
           {choices.map((c) => (
-            <div key={c.id} className={`tug-choice ${c.item ? 'is-item' : ''}`}>
+            <div
+              key={c.id}
+              className={`tug-choice ${c.item ? 'is-item' : ''}`}
+              style={{ '--grow': Math.max(widthUnits(c.text), MIN_CHOICE_UNITS) }} // 폰에서 칸 너비 비율
+            >
               {c.item && <span className="tug-choice__item">{c.item.icon} {c.item.name}</span>}
               <span className="tug-choice__word" style={{ '--units': widthUnits(c.text) }}>
                 {status === 'ready' ? '?' : c.text}

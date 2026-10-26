@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { playKey } from '../utils/sound';
 
 /**
  * 게임용 입력창 — 낱말을 치고 Enter(또는 스페이스)로 낸다.
@@ -38,6 +39,7 @@ export default function useGameInput({ onSubmit, onKey }) {
       }
     },
     onKeyDown: (e) => {
+      if (!e.repeat && !['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'HangulMode', 'Escape'].includes(e.key)) playKey();
       if (onKey?.(e)) {
         e.preventDefault();
         return;
