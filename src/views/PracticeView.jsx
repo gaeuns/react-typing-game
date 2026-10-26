@@ -7,11 +7,12 @@ import KeyPractice from '../components/KeyPractice';
 import KeyboardView from '../components/KeyboardView';
 import ViewHeader from '../components/ViewHeader';
 import useTimer from '../hooks/useTimer';
-import { PRACTICE_KINDS, pickRound } from '../data/practice';
+import { PRACTICE_KINDS, TIMED_MS, pickRound } from '../data/practice';
 import { FINGER_NAME, STAGES, fingerOf, keyForStroke, keyLabel } from '../data/keyboard';
 import { calcAccuracy, calcSpeed, compareInput } from '../utils/calculate';
 import { isPrefix, toKeystrokes } from '../utils/hangul';
 import { getBest, saveIfBest } from '../utils/storage';
+import { playKey, playWrong } from '../utils/sound';
 
 const EMPTY_TOTALS = { correctChars: 0, correctStrokes: 0, typedChars: 0 };
 const FLASH_MS = 300; // 누른 키를 맞음/틀림 색으로 보여주는 시간
@@ -22,6 +23,7 @@ const PLACEHOLDER = {
   words: '낱말을 따라 치면 시작돼요',
   short: '문장을 따라 치면 시작돼요',
   long: '첫 줄을 따라 치면 시작돼요',
+  timed: '문장을 따라 치면 60초가 흘러요',
 };
 
 // 최고 기록은 연습 종류 · 언어별로 따로 (자리 연습은 단계별로도) — 단문은 예전 저장 키(ko/en)를 그대로 쓴다
@@ -129,6 +131,17 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     focusInput();
   }, []);
 
+  // 60초 연습 — 시간이 다 되면 치던 문장까지 세어서 끝낸다
+  useEffect(() => {
+    if (kind !== 'timed' || result || timer.elapsed < TIMED_MS) return;
+    timer.stop();
+    finishRound({
+      speed: calcSpeed(totals.correctStrokes + current.correctStrokes, TIMED_MS, { final: true }),
+      accuracy,
+      time: TIMED_MS,
+    });
+  }, [timer.elapsed]);
+
   // ─── 한 판 끝 → 결과 & 최고 기록 저장 (모든 연습 종류 공통) ───
   const finishRound = (record) => {
     const key = bestKey(kind, mode, keyStage);
@@ -139,7 +152,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     setResult({ ...record, isBest, prevBest, implausible });
   };
 
-  // 결과 화면의 "다음" — 자리 연습은 다음 단계로, 그다음은 낱말 → 단문 → 장문 → 장문(다른 작품)
+  // 결과 화면의 "다음" — 자리 연습은 다음 단계로, 그다음은 낱말 → 단문 → 장문 → 장문(다른 작품), 60초는 한 번 더
   const stageIndex = STAGES.findIndex((s) => s.id === keyStage);
   const next = (() => {
     if (kind === 'keys' && stageIndex < STAGES.length - 1) {
@@ -149,6 +162,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     if (kind === 'keys') return { kind: 'words', label: '낱말 연습' };
     if (kind === 'words') return { kind: 'short', label: '단문 연습' };
     if (kind === 'short') return { kind: 'long', label: '장문 연습' };
+    if (kind === 'timed') return { kind: 'timed', label: '60초 연습 · 한 번 더' };
     return { kind: 'long', label: '장문 연습 · 다른 작품' };
   })();
 
@@ -163,6 +177,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
 
   // ─── 문장(낱말 · 줄) 하나 완료 ────────────────────────────────
   const completeSentence = (value) => {
+    if (result) return; // 60초가 끝난 뒤 늦게 확정된 글자
     const stats = compareInput(target, value, false);
     const nextTotals = {
       correctChars: totals.correctChars + stats.correctChars,
@@ -218,6 +233,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   const handleCompositionEnd = (e) => {
     composingRef.current = false;
     setIsComposing(false);
+    if (result) return; // 60초가 끝난 뒤 늦게 확정된 글자는 통계에 넣지 않는다
 
     const value = e.target.value.slice(0, target.length);
     setInput(value);
@@ -236,8 +252,10 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
       return;
     }
 
-    // 누른 키가 지금 눌러야 할 키였는지 바로 표시 (Shift · Ctrl 같은 보조키만 누른 건 제외)
-    if (!e.repeat && !['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'HangulMode'].includes(e.key) && nextKey) {
+    // 누른 키가 지금 눌러야 할 키였는지 바로 표시 + 효과음 (Shift · Ctrl 같은 보조키만 누른 건 제외)
+    const isModifier = ['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'HangulMode'].includes(e.key);
+    if (!e.repeat && !isModifier && !nextKey) playKey(); // 자판에 없는 글자는 판정 없이 소리만
+    if (!e.repeat && !isModifier && nextKey) {
       // 영문 대소문자는 CapsLock도 반영 (Shift와 CapsLock이 하나만 켜져 있으면 대문자)
       const isLetter = e.code.startsWith('Key');
       const shifted = mode === 'en' && isLetter ? e.shiftKey !== e.getModifierState('CapsLock') : e.shiftKey;
@@ -246,6 +264,8 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
       else if (nextKey === BACKSPACE) ok = e.code === 'Backspace';
       else ok = e.code === nextKey.code && shifted === nextKey.shift;
       setKeyFlash({ code: e.code, ok });
+      if (ok) playKey();
+      else playWrong();
     }
 
     // 다 쳤으면 스페이스 · Enter로 다음 문장(낱말 · 줄)으로
@@ -313,7 +333,8 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
               className={`kind-tabs__btn ${kind === k.id ? 'is-active' : ''}`}
               onClick={() => changeKind(k.id)}
             >
-              {k.label}
+              {k.short}
+              <span className="kind-tabs__suffix">{k.label.slice(k.short.length)}</span>
             </button>
           ))}
         </nav>
@@ -336,6 +357,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
               elapsed={timer.elapsed}
               current={index + 1}
               total={items.length}
+              timeLimit={kind === 'timed' ? TIMED_MS : null}
             />
 
             <TypingBoard
@@ -402,7 +424,11 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
                   <kbd>Space</kbd> · <kbd>Enter</kbd> 다음 {kindInfo.unit}
                 </span>
               </span>
-              <span>누른 키가 맞으면 초록, 틀리면 빨강으로 바로 표시돼요</span>
+              <span>
+                {kind === 'timed'
+                  ? '60초 동안 최대한 많이 정확하게 쳐 보세요'
+                  : '누른 키가 맞으면 초록, 틀리면 빨강으로 바로 표시돼요'}
+              </span>
             </footer>
           </>
         )}

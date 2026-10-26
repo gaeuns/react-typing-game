@@ -4,6 +4,7 @@ import KeyboardView from './KeyboardView';
 import useTimer from '../hooks/useTimer';
 import { FINGER_NAME, STAGES, fingerOf, keyLabel, pickKeys } from '../data/keyboard';
 import { calcAccuracy, calcSpeed } from '../utils/calculate';
+import { playKey, playWrong } from '../utils/sound';
 
 const UPCOMING = 8; // 다음에 칠 키를 몇 개까지 미리 보여줄지
 const FLASH_MS = 300; // 누른 키를 맞음/틀림 색으로 보여주는 시간
@@ -51,6 +52,8 @@ export default function KeyPractice({ mode, stage, disabled, onStageChange, onFi
     setPresses(nextPresses);
     setCorrect(nextCorrect);
     setFlash({ code, ok });
+    if (ok) playKey();
+    else playWrong();
     if (!ok) return;
 
     // 맞은 키만 다음으로 넘어간다

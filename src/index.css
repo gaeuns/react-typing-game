@@ -162,6 +162,21 @@ kbd {
 }
 
 /* ─── 모드 토글 ──────────────────────────────────────────────── */
+.sound-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 1.1rem;
+}
+
+.sound-btn.is-off {
+  opacity: 0.55;
+}
+
 .mode-toggle {
   display: flex;
   padding: 4px;
@@ -2275,6 +2290,11 @@ kbd {
     font-size: 0.8rem;
   }
 
+  /* 탭이 다섯 개라 "연습"은 빼고 짧게 */
+  .kind-tabs__suffix {
+    display: none;
+  }
+
   .keypad {
     padding: 20px 12px;
     gap: 16px;
@@ -2530,9 +2550,15 @@ kbd {
     display: none;
   }
 
-  /* 폰: 긴 영어 낱말(13자)도 한 줄에 — 최소 글자 크기를 조금 낮춘다 */
-  .tug-choice__word {
-    font-size: clamp(0.72rem, calc(100cqi / var(--units, 6)), 1.7rem);
+  /* 폰: 칸 너비를 낱말 길이에 맞춰 나눈다 — 긴 영어 낱말(13자)도 한 줄에, 글자는 셋이 비슷한 크기로 */
+  .tug-choices {
+    display: flex;
+    gap: 6px;
+  }
+
+  .tug-choice {
+    flex: var(--grow, 1) 1 0;
+    padding-inline: 4px;
   }
 
   .game-overlay__actions {
@@ -2591,6 +2617,25 @@ kbd {
   .game-card__best {
     justify-self: start;
     margin-top: 2px;
+  }
+}
+
+/* ─── 아주 좁은 폰(360px 등): 머리줄이 두 줄이 되지 않게 로고 글자는 빼고 마크만 ─── */
+@media (max-width: 400px) {
+  .logo--compact .logo__text {
+    display: none;
+  }
+
+  .sound-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* ─── 작고 낮은 폰(360×640 등): 게임 시작 화면이 스크롤 없이 들어오게 버튼을 조금 낮게 ─── */
+@media (max-width: 640px) and (max-height: 680px) {
+  .game-overlay__actions .btn {
+    min-height: 44px;
   }
 }
 
