@@ -32,6 +32,16 @@ export function saveIfBest(key, record) {
   return true;
 }
 
+/** 연습 최고 기록을 통째로 바꾼다 (로그인한 계정 기록으로) — 화면이 다시 읽도록 'tadak:bests' 이벤트를 보낸다 */
+export function replaceBests(all) {
+  try {
+    localStorage.setItem(BEST_KEY, JSON.stringify(all));
+  } catch {
+    // 저장 실패는 무시
+  }
+  window.dispatchEvent(new Event('tadak:bests'));
+}
+
 // ─── 게임 최고 점수 ─────────────────────────────────────────────
 
 const GAME_KEY = 'tadak:games';
