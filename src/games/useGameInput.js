@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { playKey } from '../utils/sound';
+import { AUTO_LANG, applyKey } from '../utils/hangulInput';
 
 /**
  * 게임용 입력창 — 낱말을 치고 Enter(또는 스페이스)로 낸다.
@@ -8,12 +9,14 @@ import { playKey } from '../utils/sound';
  * keydown은 "조합 중"으로 오고, 글자는 그 뒤 compositionend에서야 확정된다.
  * 그래서 조합 중에 누른 제출 키는 기억해 뒀다가 조합이 끝나는 순간 낸다.
  *
+ * 키보드가 있는 기기에서는 한/영 자동(utils/hangulInput.js) — 입력기 대신 고른 언어(mode)대로 직접 넣는다.
+ *
  * onSubmit(text): 낸 낱말 (앞뒤 공백 제거, 빈 문자열은 무시)
  * onKey(e): 그 밖의 keydown (아이템 숫자키 · Esc 등) — true를 돌려주면 기본 처리를 막는다
  */
-export default function useGameInput({ onSubmit, onKey }) {
+export default function useGameInput({ mode, onSubmit, onKey }) {
   const [value, setValue] = useState('');
-  const composing = useRef(false);
+  const composing = useRef(false); // 입력기 조합 중 (터치 기기) 또는 한/영 자동의 조합 중
   const submitAfterCompose = useRef(false);
 
   const submit = (text) => {
@@ -48,6 +51,20 @@ export default function useGameInput({ onSubmit, onKey }) {
       // 물리 키(code)도 같이 본다
       const isSubmitKey =
         e.key === 'Enter' || e.key === ' ' || ['Enter', 'NumpadEnter', 'Space'].includes(e.nativeEvent.code);
+      if (AUTO_LANG) {
+        if (isSubmitKey) {
+          e.preventDefault();
+          composing.current = false;
+          submit(value);
+          return;
+        }
+        const next = applyKey(value, composing.current, e.nativeEvent, mode);
+        if (!next) return;
+        e.preventDefault();
+        composing.current = next.composing;
+        setValue(next.text);
+        return;
+      }
       if (!isSubmitKey) return;
       if (e.nativeEvent.isComposing || composing.current) {
         submitAfterCompose.current = true;
@@ -56,6 +73,7 @@ export default function useGameInput({ onSubmit, onKey }) {
       e.preventDefault();
       submit(e.target.value);
     },
+    readOnly: AUTO_LANG, // 입력기가 끼어들지 않게 — 글자는 keydown에서 직접 넣는다
     autoComplete: 'off',
     autoCorrect: 'off',
     autoCapitalize: 'off',

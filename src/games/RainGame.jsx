@@ -1,13 +1,14 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
+import RankNote from './RankNote';
 import GameStat from './GameStat';
 import {
   Banner,
+  Countdown,
   DangerBar,
-  ItemChips,
+  GameGuide,
   LangPicker,
   Popups,
-  Rules,
   addPopup,
   pruneEffects,
   showBanner,
@@ -98,13 +99,18 @@ export default function RainGame({ mode, autoStart, onModeChange, onExit }) {
     });
   };
 
+  // 시작 · 다시 하기 → 3 · 2 · 1 → begin
   const start = () => {
     g.current = freshGame();
+    setResult(null);
+    setStatus('countdown');
+  };
+
+  const begin = () => {
     // 시작부터 여러 개가 떨어지고 있게
     for (let i = 0; i < START_ITEMS; i += 1) spawn(0.18 - i * 0.07);
     g.current.spawnIn = spawnEvery(1);
     showBanner(g.current, 'STAGE 1', '빨간 선을 지켜라!');
-    setResult(null);
     setStatus('playing');
     focusInput();
   };
@@ -199,6 +205,7 @@ export default function RainGame({ mode, autoStart, onModeChange, onExit }) {
   }, status === 'playing');
 
   const { inputProps } = useGameInput({
+    mode,
     onSubmit: (text) => {
       if (status !== 'playing') return;
       const game = g.current;
@@ -316,25 +323,40 @@ export default function RainGame({ mode, autoStart, onModeChange, onExit }) {
           primary={{ label: '시작하기', onClick: start }}
           secondary={{ label: '게임 목록', onClick: onExit }}
         >
-          <Rules
+          <GameGuide
+            intro={[
+              '음식 · 동물 · 물건이 하늘에서 쏟아져요. 빨간 선에 닿기 전에 낱말을 쳐서 냠냠 먹어 치우세요.',
+              '단계가 오를수록 더 빨리, 더 많이 떨어져요. 하나라도 놓치면 끝이에요!',
+            ]}
             rules={[
-              ['🎯', '떨어지는 낱말을 치고 Enter'],
+              ['🎯', '떨어지는 낱말을 치고 Enter 또는 스페이스'],
+              ['⬇️', '같은 낱말이 여럿이면 가장 아래 것부터 먹어요'],
               ['☠️', '하나라도 빨간 선에 닿으면 게임 오버'],
               ['📈', `${CLEARS_PER_STAGE}개마다 단계 UP · 점점 빨라져요`],
               ['🔥', '콤보를 이으면 점수 최대 3배'],
             ]}
+            items={[
+              {
+                title: '특수 아이템 · 함께 떨어져요, 낱말을 치면 효과',
+                list: [
+                  ['💣', '폭탄', '화면에 있는 것을 모두 한 번에 냠냠'],
+                  ['⏱️', '시계', `${SLOW_SECONDS}초 동안 천천히 떨어져요`],
+                  ['🛡️', '방패', `빨간 선에 닿아도 한 번 막아 줘요 · 최대 ${MAX_SHIELDS}개`],
+                ],
+              },
+            ]}
           />
-          <ItemChips title="특수 아이템" items={RAIN_SPECIALS.map((s) => [s.icon, s.desc])} />
           <LangPicker mode={mode} onModeChange={onModeChange} />
         </GameOverlay>
       )}
+      {status === 'countdown' && <Countdown onDone={begin} />}
       {status === 'paused' && (
         <GameOverlay
           title="일시정지"
           primary={{ label: '계속하기', onClick: resume }}
           secondary={{ label: '그만하기', onClick: onExit }}
         >
-          <p>입력창에서 벗어나 잠시 멈췄어요.</p>
+          <p>잠시 멈췄어요. 준비되면 계속하세요.</p>
         </GameOverlay>
       )}
       {status === 'over' && result && (
@@ -353,6 +375,7 @@ export default function RainGame({ mode, autoStart, onModeChange, onExit }) {
           ) : (
             result.prev && <p>최고 점수 {result.prev.score}점</p>
           )}
+          <RankNote game="rain" mode={mode} score={result.score} level={result.stage} />
         </GameOverlay>
       )}
     </div>

@@ -7,12 +7,13 @@ import KeyPractice from '../components/KeyPractice';
 import KeyboardView from '../components/KeyboardView';
 import ViewHeader from '../components/ViewHeader';
 import useTimer from '../hooks/useTimer';
-import { PRACTICE_KINDS, TIMED_MS, pickRound } from '../data/practice';
+import { PRACTICE_KINDS, TIMED_MS, getPassage, passageTitles, pickRound } from '../data/practice';
 import { FINGER_NAME, STAGES, fingerOf, keyForStroke, keyLabel } from '../data/keyboard';
 import { calcAccuracy, calcSpeed, compareInput } from '../utils/calculate';
 import { isPrefix, toKeystrokes } from '../utils/hangul';
 import { getBest, saveIfBest } from '../utils/storage';
 import { playKey, playWrong } from '../utils/sound';
+import { AUTO_LANG, applyKey } from '../utils/hangulInput';
 
 const EMPTY_TOTALS = { correctChars: 0, correctStrokes: 0, typedChars: 0 };
 const FLASH_MS = 300; // 누른 키를 맞음/틀림 색으로 보여주는 시간
@@ -111,9 +112,15 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
 
   // ─── 라운드 시작 / 리셋 ───────────────────────────────────────
   // 장문을 Esc · 다시 하기로 처음부터 하면 같은 작품 그대로, "다음"(excludeTitle)일 때만 다른 작품
-  const resetRound = (nextMode = mode, nextKind = kind, { stage = keyStage, excludeTitle = null } = {}) => {
+  // passage: 작품 목록에서 고른 작품, focus: false면 입력창으로 포커스를 옮기지 않는다 (목록을 화살표로 훑는 중)
+  const resetRound = (
+    nextMode = mode,
+    nextKind = kind,
+    { stage = keyStage, excludeTitle = null, passage = null, focus = true } = {},
+  ) => {
     const sameLong = nextKind === 'long' && kind === 'long' && nextMode === mode && !excludeTitle;
-    setRound(sameLong ? round : pickRound(nextKind, nextMode, excludeTitle));
+    if (passage) setRound(getPassage(nextMode, passage));
+    else setRound(sameLong ? round : pickRound(nextKind, nextMode, excludeTitle));
     setRoundId((id) => id + 1);
     setIndex(0);
     setInput('');
@@ -124,11 +131,24 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     setKeyFlash(null);
     setBest(getBest(bestKey(nextKind, nextMode, stage)));
     timer.reset();
-    setTimeout(focusInput, 0);
+    if (focus) setTimeout(focusInput, 0);
   };
 
   useEffect(() => {
     focusInput();
+  }, []);
+
+  // F5: 페이지 새로고침 대신 하던 연습을 처음부터 (Ctrl · Shift + F5 강력 새로고침은 브라우저에 맡긴다)
+  const resetRef = useRef(resetRound);
+  resetRef.current = resetRound;
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key !== 'F5' || e.ctrlKey || e.shiftKey || e.metaKey || e.altKey) return;
+      e.preventDefault();
+      resetRef.current();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // 60초 연습 — 시간이 다 되면 치던 문장까지 세어서 끝낸다
@@ -186,6 +206,8 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     };
     setTotals(nextTotals);
     setInput('');
+    composingRef.current = false;
+    setIsComposing(false);
 
     const isLast = index + 1 >= items.length;
     if (!isLast) {
@@ -223,6 +245,16 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     timer.start();
     setInput(value);
     // 다 쳐도 바로 넘어가지 않는다 — 스페이스나 Enter를 눌러야 다음으로 (handleKeyDown)
+  };
+
+  // 한/영 자동 — keydown에서 만든 입력값을 반영한다 (입력기 대신 직접 조합)
+  const applyTyped = ({ text, composing }) => {
+    if (input === '' && text === ' ') return; // 문장을 넘기자마자 습관적으로 누른 스페이스
+    if (text.length > target.length) return; // 문장보다 길게는 못 친다
+    timer.start();
+    composingRef.current = composing;
+    setIsComposing(composing);
+    setInput(text);
   };
 
   const handleCompositionStart = () => {
@@ -272,6 +304,19 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     // 조합 중 keydown은 입력기에 따라 key가 'Process'로 오기도 해서 물리 키(code)도 본다
     const isAdvanceKey =
       e.key === 'Enter' || e.key === ' ' || ['Enter', 'NumpadEnter', 'Space'].includes(e.nativeEvent.code);
+    if (AUTO_LANG) {
+      if (isAdvanceKey && input.length >= target.length) {
+        e.preventDefault();
+        completeSentence(input);
+        return;
+      }
+      if (['Enter', 'NumpadEnter'].includes(e.nativeEvent.code)) return;
+      const next = applyKey(input, composingRef.current, e.nativeEvent, mode);
+      if (!next) return;
+      e.preventDefault();
+      applyTyped(next);
+      return;
+    }
     if (!isAdvanceKey || input.length < target.length) return;
     if (e.nativeEvent.isComposing || composingRef.current) {
       advanceAfterCompose.current = true; // 조합이 끝나는 순간(compositionend) 넘어간다
@@ -365,6 +410,9 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
               input={input}
               isComposing={isComposing}
               title={round.title}
+              titles={kind === 'long' ? passageTitles(mode) : null}
+              onTitleChange={(title, { keepFocus }) => resetRound(mode, kind, { passage: title, focus: !keepFocus })}
+              onTitleDone={focusInput}
               upcoming={items.slice(index + 1, index + 1 + (kind === 'words' ? 5 : kind === 'long' ? 2 : 1))}
               upcomingLayout={kind === 'words' ? 'inline' : 'lines'}
               onClick={focusInput}
@@ -374,6 +422,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
               ref={inputRef}
               value={input}
               disabled={!!result}
+              readOnly={AUTO_LANG}
               placeholder={timer.isRunning || index > 0 ? '' : PLACEHOLDER[kind]}
               onChange={handleChange}
               onKeyDown={handleKeyDown}
@@ -418,11 +467,12 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
             <footer className="hints">
               <span className="hints__keys">
                 <span>
-                  <kbd>Esc</kbd> 처음부터
+                  <kbd>Esc</kbd> · <kbd>F5</kbd> 처음부터
                 </span>
                 <span>
                   <kbd>Space</kbd> · <kbd>Enter</kbd> 다음 {kindInfo.unit}
                 </span>
+                {AUTO_LANG && <span>⌨️ 한/영 자동 — 한/영 키를 안 눌러도 돼요</span>}
               </span>
               <span>
                 {kind === 'timed'

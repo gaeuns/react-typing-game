@@ -1,14 +1,15 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
+import RankNote from './RankNote';
 import GameStat from './GameStat';
 import {
   Banner,
+  Countdown,
   DangerBar,
+  GameGuide,
   Hearts,
-  ItemChips,
   LangPicker,
   Popups,
-  Rules,
   addPopup,
   pruneEffects,
   showBanner,
@@ -30,12 +31,12 @@ const BONUS_CHANCE = 0.18; // 아이템 카드가 나올 확률
 const TIME_BONUS_SECONDS = 2.5;
 const FREEZE_SECONDS = 4;
 const SWEEP_COUNT = 2;
-// 아이템 카드 — 치면 효과 (badge: 카드에 붙는 표시, chip: 시작 화면 안내)
+// 아이템 카드 — 치면 효과 (badge: 카드에 붙는 표시)
 const ITEM_CARDS = {
-  time: { badge: `⏳ 시간 +${TIME_BONUS_SECONDS}초`, chip: ['⏳', `시간 +${TIME_BONUS_SECONDS}초`] },
-  heart: { badge: '💖 하트 +1', chip: ['💖', '하트 +1'] },
-  freeze: { badge: `🧊 얼음 ${FREEZE_SECONDS}초`, chip: ['🧊', `${FREEZE_SECONDS}초 멈춤`] },
-  sweep: { badge: `🧹 ${SWEEP_COUNT}장 지우기`, chip: ['🧹', `${SWEEP_COUNT}장 지우기`] },
+  time: { badge: `⏳ 시간 +${TIME_BONUS_SECONDS}초` },
+  heart: { badge: '💖 하트 +1' },
+  freeze: { badge: `🧊 얼음 ${FREEZE_SECONDS}초` },
+  sweep: { badge: `🧹 ${SWEEP_COUNT}장 지우기` },
 };
 // 카드 하나에 주는 시간(초) = (기본 + 글자당) × 단계 배율, 최소 1.8초
 // 단계 배율: 5단계까지는 한 단계에 4%씩 조금씩 줄고, 6단계부터는 14%씩 확 줄어든다
@@ -93,10 +94,15 @@ export default function SpeedGame({ mode, autoStart, onModeChange, onExit }) {
 
   const focusInput = () => setTimeout(() => inputRef.current?.focus(), 0);
 
+  // 시작 · 다시 하기 → 3 · 2 · 1 → begin
   const start = () => {
     g.current = freshGame();
-    showBanner(g.current, 'STAGE 1', '카드 2장으로 시작!');
     setResult(null);
+    setStatus('countdown');
+  };
+
+  const begin = () => {
+    showBanner(g.current, 'STAGE 1', '카드 2장으로 시작!');
     setStatus('playing');
     focusInput();
   };
@@ -172,6 +178,7 @@ export default function SpeedGame({ mode, autoStart, onModeChange, onExit }) {
   }, status === 'playing');
 
   const { inputProps } = useGameInput({
+    mode,
     onSubmit: (text) => {
       if (status !== 'playing') return;
       const game = g.current;
@@ -344,26 +351,41 @@ export default function SpeedGame({ mode, autoStart, onModeChange, onExit }) {
           primary={{ label: '시작하기', onClick: start }}
           secondary={{ label: '게임 목록', onClick: onExit }}
         >
-          <Rules
+          <GameGuide
+            intro={[
+              '낱말 카드가 여러 장 한꺼번에 나와요. 카드마다 시간 막대가 줄어드니 급한 카드부터 쳐서 하트를 지키세요.',
+              '단계가 오를수록 카드가 늘고 빨라져요. 얼마나 높은 단계까지 버틸 수 있을까요?',
+            ]}
             rules={[
-              ['🎯', '카드 낱말을 치고 Enter'],
-              ['💔', '시간 안에 못 치면 하트 -1'],
-              ['☠️', '하트 0개면 게임 오버'],
-              ['📈', `${CLEARS_PER_STAGE}장마다 단계 UP · ${HARD_FROM_STAGE}단계부터 빨라져요`],
-              ['🔥', `${FEVER_COMBO}콤보면 점수 2배`],
+              ['🎯', '카드의 낱말을 치고 Enter 또는 스페이스'],
+              ['⏳', '막대가 다 줄기 전에 쳐야 해요. 놓치면 하트 -1'],
+              ['☠️', '하트를 모두 잃으면 게임 오버'],
+              ['📈', `${CLEARS_PER_STAGE}장마다 단계 UP · ${HARD_FROM_STAGE}단계부터 확 빨라져요`],
+              ['🔥', `${FEVER_COMBO}콤보마다 피버 타임 · ${FEVER_SECONDS}초 동안 점수 2배`],
+            ]}
+            items={[
+              {
+                title: '아이템 카드 · 낱말을 치면 효과가 나요',
+                list: [
+                  ['⏳', '시간', `모든 카드에 ${TIME_BONUS_SECONDS}초를 더해요`],
+                  ['💖', '하트', `하트 1개 회복 · 최대 ${MAX_HEARTS}개`],
+                  ['🧊', '얼음', `${FREEZE_SECONDS}초 동안 시간이 멈춰요`],
+                  ['🧹', '빗자루', `가장 급한 카드 ${SWEEP_COUNT}장을 한 번에 지워요`],
+                ],
+              },
             ]}
           />
-          <ItemChips title="아이템 카드" items={Object.values(ITEM_CARDS).map((item) => item.chip)} />
           <LangPicker mode={mode} onModeChange={onModeChange} />
         </GameOverlay>
       )}
+      {status === 'countdown' && <Countdown onDone={begin} />}
       {status === 'paused' && (
         <GameOverlay
           title="일시정지"
           primary={{ label: '계속하기', onClick: resume }}
           secondary={{ label: '그만하기', onClick: onExit }}
         >
-          <p>입력창에서 벗어나 잠시 멈췄어요.</p>
+          <p>잠시 멈췄어요. 준비되면 계속하세요.</p>
         </GameOverlay>
       )}
       {status === 'over' && result && (
@@ -382,6 +404,7 @@ export default function SpeedGame({ mode, autoStart, onModeChange, onExit }) {
           ) : (
             result.prev && <p>최고 점수 {result.prev.score}점</p>
           )}
+          <RankNote game="speed" mode={mode} score={result.score} level={result.stage} />
         </GameOverlay>
       )}
     </div>

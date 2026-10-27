@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import ViewHeader from '../components/ViewHeader';
+import RankingBoard from '../components/RankingBoard';
 import SpeedGame from '../games/SpeedGame';
 import RainGame from '../games/RainGame';
 import TugGame from '../games/TugGame';
@@ -85,6 +86,7 @@ export default function GameView({ mode, onModeChange, game, onSelectGame, onOpe
               );
             })}
           </div>
+          <RankingBoard mode={mode} />
         </main>
       )}
     </div>

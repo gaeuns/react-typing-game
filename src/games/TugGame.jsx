@@ -1,13 +1,14 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
+import RankNote from './RankNote';
 import GameStat from './GameStat';
 import {
   Banner,
+  Countdown,
   DangerBar,
-  ItemChips,
+  GameGuide,
   LangPicker,
   Popups,
-  Rules,
   addPopup,
   pruneEffects,
   showBanner,
@@ -103,9 +104,14 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
     g.current.event = { icon, text, until: g.current.clock + EVENT_SECONDS };
   };
 
+  // 시작 · 다시 하기 → 3 · 2 · 1 → begin
   const start = () => {
     g.current = freshGame(mode);
     setResult(null);
+    setStatus('countdown');
+  };
+
+  const begin = () => {
     setStatus('playing');
     focusInput();
   };
@@ -180,6 +186,7 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
   }, status === 'playing');
 
   const { inputProps } = useGameInput({
+    mode,
     onSubmit: (text) => {
       if (status !== 'playing') return;
       const game = g.current;
@@ -323,7 +330,7 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
             >
               {c.item && <span className="tug-choice__item">{c.item.icon} {c.item.name}</span>}
               <span className="tug-choice__word" style={{ '--units': widthUnits(c.text) }}>
-                {status === 'ready' ? '?' : c.text}
+                {status === 'ready' || status === 'countdown' ? '?' : c.text}
               </span>
             </div>
           ))}
@@ -380,27 +387,40 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
           primary={{ label: '시작하기', onClick: start }}
           secondary={{ label: '게임 목록', onClick: onExit }}
         >
-          <Rules
+          <GameGuide
+            intro={[
+              '로봇과 괴물을 상대로 하는 줄다리기! 낱말을 칠 때마다 밧줄을 내 쪽으로 당겨요.',
+              '라운드를 이길수록 더 센 상대가 나와요. 이긴 라운드에서 그만둬도 점수는 랭킹에 남아요.',
+            ]}
             rules={[
-              ['🎯', `낱말 ${CHOICES}개 중 아무거나 치면 당겨요`],
-              ['🟢', '깃발이 승리선에 닿으면 승리'],
-              ['🔴', '깃발이 패배선에 닿으면 패배'],
-              ['⏱️', `${ROUND_SECONDS}초가 끝나면 깃발이 내 쪽일 때 승리`],
-              ['💥', '게이지가 차면 필살 당기기'],
+              ['🎯', `낱말 ${CHOICES}개 중 아무거나 치면 당겨요 · 긴 낱말일수록 세게`],
+              ['🟢', '깃발이 초록 승리선에 닿으면 바로 승리'],
+              ['🔴', '빨간 패배선에 닿으면 패배'],
+              ['⏱️', `${ROUND_SECONDS}초가 끝나면 깃발이 내 쪽에 있을 때 승리`],
+              ['💥', '쉬지 않고 치면 콤보 · 게이지가 차면 필살 당기기'],
+            ]}
+            items={[
+              {
+                title: `내 아이템 · 금색 낱말로 얻고 1~${MAX_ITEMS} 키로 써요`,
+                list: PLAYER_ITEMS.map((item) => [item.icon, item.name, item.desc]),
+              },
+              {
+                title: '상대 방해',
+                list: CPU_ITEMS.map((item) => [item.icon, item.name, item.desc]),
+              },
             ]}
           />
-          <ItemChips title="금색 낱말 → 아이템 · 숫자키 1~3" items={PLAYER_ITEMS.map((item) => [item.icon, item.desc])} />
-          <ItemChips title="상대 방해" items={CPU_ITEMS.map((item) => [item.icon, item.name])} />
           <LangPicker mode={mode} onModeChange={onModeChange} />
         </GameOverlay>
       )}
+      {status === 'countdown' && <Countdown onDone={begin} />}
       {status === 'paused' && (
         <GameOverlay
           title="일시정지"
           primary={{ label: '계속하기', onClick: resume }}
           secondary={{ label: '그만하기', onClick: onExit }}
         >
-          <p>입력창에서 벗어나 잠시 멈췄어요.</p>
+          <p>잠시 멈췄어요. 준비되면 계속하세요.</p>
         </GameOverlay>
       )}
       {status === 'won' && (
@@ -417,6 +437,8 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
               : '🚩 깃발을 승리선까지 당겨서 승리'}
           </p>
           {result?.isBest && <p className="game-overlay__best">최고 점수 저장!</p>}
+          {/* 이긴 라운드마다 랭킹에도 올린다 — 여기서 그만둬도 남게 (랭킹은 사람마다 최고 점수만) */}
+          <RankNote game="tug" mode={mode} score={score} level={round} />
           <p>
             다음 상대 {opponentFor(round + 1).icon} {opponentFor(round + 1).name} · 더 세요! 아이템과 게이지는 그대로
           </p>
@@ -443,6 +465,7 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
           ) : (
             result.prev && <p>최고 점수 {result.prev.score}점</p>
           )}
+          <RankNote game="tug" mode={mode} score={result.score} level={result.round} />
         </GameOverlay>
       )}
     </div>
