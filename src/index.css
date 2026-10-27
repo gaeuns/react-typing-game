@@ -576,21 +576,6 @@ kbd {
   background: var(--accent);
 }
 
-.progress--bar {
-  display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--line);
-  overflow: hidden;
-}
-
-.progress__fill {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  transition: width 0.2s;
-}
-
 /* ─── 문장 판 (원고지 줄) ─────────────────────────────────────── */
 .board {
   --line-height: 56px;
@@ -3224,12 +3209,23 @@ kbd {
   }
 
   .status {
+    position: relative;
     gap: 6px;
+    padding-bottom: 10px; /* 아래 진행 칸 자리 */
   }
 
   .stat {
     padding: 10px;
     border-radius: var(--radius-sm);
+  }
+
+  /* 폰: 진행 칸은 카드가 좁아 상태 줄 아래 전체 폭으로 — 칸이 30개여도 보이게 */
+  .stat--progress .progress {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: 0;
   }
 
   .stat__label {
