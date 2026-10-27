@@ -36,6 +36,26 @@ const SYMBOLS = {
   Backquote: ['`', '~'], Semicolon: [';', ':'], Quote: ["'", '"'], Comma: [',', '<'], Period: ['.', '>'], Slash: ['/', '?'],
 };
 
+/**
+ * 눌린 물리 키 → 고른 언어로 입력될 글자 (한/영 자동) — 글자 키가 아니면 null
+ * 한글은 자모 하나(ㄱ, ㅏ …)를 돌려주고, 조합은 utils/hangulInput.js가 한다.
+ * 영문은 Shift와 CapsLock 중 하나만 켜져 있으면 대문자.
+ */
+const NUMPAD = { NumpadDecimal: '.', NumpadAdd: '+', NumpadSubtract: '-', NumpadMultiply: '*', NumpadDivide: '/' };
+
+export function charForKey(code, { shift = false, caps = false } = {}, mode) {
+  if (code === 'Space') return ' ';
+  if (/^Numpad\d$/.test(code)) return code.slice(6);
+  if (NUMPAD[code]) return NUMPAD[code];
+  if (code.startsWith('Key')) {
+    if (mode === 'ko') return (shift && KO_SHIFT[code]) || KO[code];
+    const letter = code.slice(3).toLowerCase();
+    return shift !== caps ? letter.toUpperCase() : letter;
+  }
+  if (SYMBOLS[code]) return SYMBOLS[code][shift ? 1 : 0];
+  return null;
+}
+
 /** 키 코드 → 화면에 보일 글자 */
 export function keyLabel(code, mode) {
   if (code.startsWith('Key')) return mode === 'ko' ? KO[code] : code.slice(3).toLowerCase();

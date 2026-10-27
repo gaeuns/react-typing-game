@@ -1,4 +1,6 @@
 // 세 게임이 같이 쓰는 작은 화면 조각들
+import { useEffect, useRef, useState } from 'react';
+import { playKey } from '../utils/sound';
 
 /** 하트 — 남은 목숨 */
 export function Hearts({ count, max }) {
@@ -113,18 +115,92 @@ export function Rules({ rules }) {
   );
 }
 
-/** 시작 화면 아이템 칩 — title 아래에 [[icon, text], …] */
-export function ItemChips({ title, items }) {
+const GUIDE_TABS = [
+  ['intro', '게임 설명'],
+  ['how', '플레이 방법'],
+  ['items', '아이템'],
+];
+
+/**
+ * 시작 화면 안내 — 게임 설명 | 플레이 방법 | 아이템 탭
+ * intro: 설명 문단들, rules: [[icon, text], …], items: [{ title, list: [[icon, name, desc], …] }, …]
+ */
+export function GameGuide({ intro, rules, items }) {
+  const [tab, setTab] = useState('intro');
+  const move = (e) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const i = GUIDE_TABS.findIndex(([id]) => id === tab);
+    setTab(GUIDE_TABS[(i + step + GUIDE_TABS.length) % GUIDE_TABS.length][0]);
+  };
+
   return (
-    <div className="item-chips">
-      <span className="item-chips__title">{title}</span>
-      <div className="item-chips__list">
-        {items.map(([icon, text]) => (
-          <span key={text} className="item-chips__chip">
-            {icon} {text}
-          </span>
+    <div className="guide">
+      <div className="guide__tabs" role="tablist" aria-label="게임 안내" onKeyDown={move}>
+        {GUIDE_TABS.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            className={`guide__tab ${tab === id ? 'is-active' : ''}`}
+            onClick={() => setTab(id)}
+          >
+            {label}
+          </button>
         ))}
       </div>
+
+      <div className="guide__panel" role="tabpanel">
+        {tab === 'intro' && intro.map((text) => <p key={text} className="guide__text">{text}</p>)}
+        {tab === 'how' && <Rules rules={rules} />}
+        {tab === 'items' &&
+          items.map((group) => (
+            <div key={group.title} className="guide__group">
+              <p className="guide__group-title">{group.title}</p>
+              <ul className="guide__items">
+                {group.list.map(([icon, name, desc]) => (
+                  <li key={name}>
+                    <span className="guide__item-icon" aria-hidden="true">
+                      {icon}
+                    </span>
+                    <strong>{name}</strong>
+                    <span>{desc}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+const COUNT_FROM = 3;
+const COUNT_MS = 700;
+
+/** 시작 전 3 · 2 · 1 — 끝나면 onDone */
+export function Countdown({ onDone }) {
+  const [n, setN] = useState(COUNT_FROM);
+  const done = useRef(onDone);
+  done.current = onDone;
+
+  useEffect(() => {
+    if (n === 0) {
+      const id = setTimeout(() => done.current(), COUNT_MS / 2);
+      return () => clearTimeout(id);
+    }
+    playKey();
+    const id = setTimeout(() => setN(n - 1), COUNT_MS);
+    return () => clearTimeout(id);
+  }, [n]);
+
+  return (
+    <div className="countdown" role="status" aria-live="assertive">
+      <span key={n} className="countdown__num">
+        {n === 0 ? '시작!' : n}
+      </span>
     </div>
   );
 }

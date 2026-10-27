@@ -135,7 +135,7 @@ export default function KeyPractice({ mode, stage, disabled, onStageChange, onFi
       <footer className="hints">
         <span className="hints__keys">
           <span>
-            <kbd>Esc</kbd> 처음부터
+            <kbd>Esc</kbd> · <kbd>F5</kbd> 처음부터
           </span>
         </span>
         <span>손가락을 기본 자리(F · J 돌기)에 올려 두고 시작하세요</span>

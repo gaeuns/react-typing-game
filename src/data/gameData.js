@@ -9,9 +9,9 @@ export const RAIN_SPECIALS = [
 
 // 줄다리기 대작전 — 내가 얻어서 쓰는 아이템 (금색 낱말을 치면 얻는다)
 export const PLAYER_ITEMS = [
-  { id: 'power', icon: '💪', name: '괴력', desc: '6초 힘 2배' },
-  { id: 'freeze', icon: '🧊', name: '얼음', desc: '상대 4초 멈춤' },
-  { id: 'yank', icon: '🪢', name: '한 번에 당기기', desc: '크게 당기기' },
+  { id: 'power', icon: '💪', name: '괴력', desc: '6초 동안 당기는 힘 2배' },
+  { id: 'freeze', icon: '🧊', name: '얼음', desc: '상대가 4초 동안 못 당겨요' },
+  { id: 'yank', icon: '🪢', name: '한 번에 당기기', desc: '한 번에 크게 당겨요' },
 ];
 
 // 줄다리기 대작전 — 컴퓨터가 가끔 쓰는 방해 아이템

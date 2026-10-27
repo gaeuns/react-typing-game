@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { isPrefix, toKeystrokes } from '../utils/hangul';
 import { widthUnits } from '../utils/textWidth';
 
@@ -10,21 +11,58 @@ import { widthUnits } from '../utils/textWidth';
  *
  * upcoming: 다음에 칠 것들 — 'inline'(낱말: 한 줄에 이어서) 또는 'lines'(문장 · 장문: 줄마다)
  * title: 장문 연습의 작품 이름
+ * titles · onTitleChange: 주면 작품 이름 자리가 작품 고르기 목록이 된다
+ *   onTitleChange(title, { keepFocus }) — 화살표로 훑는 중이면 keepFocus: true (목록에 포커스를 남긴다)
+ * onTitleDone: 목록에서 Enter — 입력창으로
  */
 export default function TypingBoard({
   target,
   input,
   isComposing,
   title,
+  titles,
+  onTitleChange,
+  onTitleDone,
   upcoming = [],
   upcomingLayout = 'lines',
   onClick,
 }) {
   const cursorIndex = isComposing && input.length > 0 ? input.length - 1 : input.length;
+  // 닫힌 목록에서 화살표를 누르면 브라우저가 바로 change를 보낸다 — 그때는 입력창으로 넘어가지 않고 계속 고를 수 있게
+  const browsingByKey = useRef(false);
 
   return (
     <section className="board" onClick={onClick}>
-      {title && <p className="board__title">{title}</p>}
+      {title && !titles && <p className="board__title">{title}</p>}
+      {title && titles && (
+        // 판을 누르면 입력창으로 포커스가 가므로, 목록을 누를 땐 판까지 올라가지 않게 막는다
+        <label className="passage-picker" onClick={(e) => e.stopPropagation()}>
+          <span className="passage-picker__label">작품</span>
+          <select
+            className="passage-picker__select"
+            value={title}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onTitleDone();
+                return;
+              }
+              browsingByKey.current = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key);
+            }}
+            onChange={(e) => {
+              onTitleChange(e.target.value, { keepFocus: browsingByKey.current });
+              browsingByKey.current = false;
+            }}
+            aria-label="장문 작품 고르기"
+          >
+            {titles.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <p className="board__sentence" aria-label={target} style={{ '--units': widthUnits(target) }}>
         {target.split('').map((char, i) => {

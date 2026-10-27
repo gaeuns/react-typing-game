@@ -5,7 +5,7 @@ import { forwardRef } from 'react';
  * 한글 조합 상태는 composition 이벤트로 부모(App)에 알려준다.
  */
 const TypingInput = forwardRef(function TypingInput(
-  { value, placeholder, disabled, onChange, onKeyDown, onCompositionStart, onCompositionEnd, onFocus, onBlur },
+  { value, placeholder, disabled, readOnly, onChange, onKeyDown, onCompositionStart, onCompositionEnd, onFocus, onBlur },
   ref,
 ) {
   return (
@@ -16,6 +16,7 @@ const TypingInput = forwardRef(function TypingInput(
       value={value}
       placeholder={placeholder}
       disabled={disabled}
+      readOnly={readOnly}
       onChange={onChange}
       onKeyDown={onKeyDown}
       onCompositionStart={onCompositionStart}
