@@ -12,6 +12,8 @@ import { FINGER_NAME, STAGES, fingerOf, keyForStroke, keyLabel } from '../data/k
 import { calcAccuracy, calcSpeed, compareInput } from '../utils/calculate';
 import { isPrefix, toKeystrokes } from '../utils/hangul';
 import { getBest, saveIfBest } from '../utils/storage';
+import { saveAccountBest } from '../utils/practiceBests';
+import { useAuth } from '../hooks/useAuth';
 import { playKey, playWrong } from '../utils/sound';
 import { AUTO_LANG, applyKey } from '../utils/hangulInput';
 
@@ -81,6 +83,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   const [keyFlash, setKeyFlash] = useState(null); // 방금 누른 키 { code, ok }
 
   const timer = useTimer();
+  const { user } = useAuth();
   const inputRef = useRef(null);
   const composingRef = useRef(false); // 이벤트 핸들러 안에서 최신 조합 상태를 읽기 위한 ref
   const advanceAfterCompose = useRef(false); // 마지막 글자를 조합하는 중에 스페이스 · Enter를 눌렀다
@@ -138,6 +141,13 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     focusInput();
   }, []);
 
+  // 로그인 · 로그아웃으로 기록이 계정 것으로 바뀌면 머리줄 최고 기록도 다시 읽는다
+  useEffect(() => {
+    const refresh = () => setBest(getBest(bestKey(kind, mode, keyStage)));
+    window.addEventListener('tadak:bests', refresh);
+    return () => window.removeEventListener('tadak:bests', refresh);
+  }, [kind, mode, keyStage]);
+
   // F5: 페이지 새로고침 대신 하던 연습을 처음부터 (Ctrl · Shift + F5 강력 새로고침은 브라우저에 맡긴다)
   const resetRef = useRef(resetRound);
   resetRef.current = resetRound;
@@ -169,6 +179,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     const implausible = record.speed > MAX_PLAUSIBLE_SPEED;
     const isBest = !implausible && saveIfBest(key, record);
     if (isBest) setBest(getBest(key));
+    if (isBest && user) saveAccountBest(key, record).catch(() => {}); // 로그인했으면 계정에도
     setResult({ ...record, isBest, prevBest, implausible });
   };
 

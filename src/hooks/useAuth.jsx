@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../utils/supabase';
+import { clearLocalBests, loadAccountBests } from '../utils/practiceBests';
 
 /**
  * 로그인 상태 — 앱 전체가 같이 쓴다 (사이드바 닉네임, 메인 화면, 게임 랭킹).
@@ -7,6 +8,9 @@ import { supabase } from '../utils/supabase';
  *
  * 아이디로 가입 · 로그인한다. Supabase Auth는 이메일이 있어야 해서 "아이디@tadak.invalid"를 넣어 쓴다
  * (.invalid는 실제로 존재할 수 없는 도메인이라 메일이 나가지 않는다). 이메일(선택)은 user_metadata에만 둔다.
+ *
+ * 타자 연습 최고 기록: 로그인 · 가입할 때마다 이 기기 기록을 비우고 계정 기록을 불러온다.
+ * 이미 로그인된 채로 페이지를 열면 계정 기록으로 맞추고, 로그아웃하면 비운다 (utils/practiceBests.js).
  */
 const AuthContext = createContext(null);
 
@@ -65,8 +69,12 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
       setLoading(false);
+      if (data.session) loadAccountBests().catch(() => {}); // 다른 기기에서 세운 기록까지
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (event === 'SIGNED_OUT') clearLocalBests(); // 다른 탭에서 로그아웃해도
+    });
     return () => data.subscription.unsubscribe();
   }, []);
 
@@ -90,7 +98,11 @@ export function AuthProvider({ children }) {
   const signIn = async (username, password) => {
     if (!username.trim()) return { error: '아이디를 입력해 주세요.' };
     const { error } = await supabase.auth.signInWithPassword({ email: toLoginEmail(username), password });
-    return error ? { error: toMessage(error) } : {};
+    if (error) return { error: toMessage(error) };
+    // 로그인할 때마다 이 기기 기록은 비우고 내 계정 기록으로
+    clearLocalBests();
+    loadAccountBests().catch(() => {});
+    return {};
   };
 
   /** 회원가입 — 아이디 · 닉네임 중복 확인은 화면에서 먼저 끝낸다. 이메일은 선택 */
@@ -111,11 +123,13 @@ export function AuthProvider({ children }) {
     if (error) return { error: toMessage(error) };
     // 이미 있는 아이디면 Supabase는 오류 없이 빈 identities를 돌려줄 때가 있다
     if (data.user && data.user.identities?.length === 0) return { error: '이미 있는 아이디예요. 중복 확인을 다시 해 주세요.' };
+    clearLocalBests(); // 새 계정은 기록 0부터
     return {};
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    clearLocalBests();
   };
 
   const value = {
