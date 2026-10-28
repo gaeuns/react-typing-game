@@ -483,12 +483,6 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
                 <span>
                   <kbd>Space</kbd> · <kbd>Enter</kbd> 다음 {kindInfo.unit}
                 </span>
-                {AUTO_LANG && <span>⌨️ 한/영 자동 — 한/영 키를 안 눌러도 돼요</span>}
-              </span>
-              <span>
-                {kind === 'timed'
-                  ? '60초 동안 최대한 많이 정확하게 쳐 보세요'
-                  : '누른 키가 맞으면 초록, 틀리면 빨강으로 바로 표시돼요'}
               </span>
             </footer>
           </>
