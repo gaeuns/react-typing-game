@@ -10,7 +10,7 @@ import { pickQuiz } from '../data/chosungQuiz';
 import { getGameBest, saveGameBest } from '../utils/storage';
 import { widthUnits } from '../utils/textWidth';
 
-const GAME_SECONDS = 60; // 맞히든 넘기든 시간은 그대로 — 1분 고정
+const GAME_SECONDS = 50; // 맞히든 넘기든 시간은 그대로 — 50초 고정
 const TOTAL_QUESTIONS = 20; // 한 판 문제 수 — 다 풀면 시간이 남아도 끝
 const HINT_AFTER_SECONDS = 6; // 이만큼 못 맞히면 첫 글자를 보여 준다 (점수는 절반)
 const QUICK_SECONDS = 3; // 이 안에 맞히면 번개 보너스
@@ -38,7 +38,7 @@ const freshGame = () => ({
 
 /**
  * 초성 퀴즈 — ㅌㅈㅇㅅ 같은 초성과 힌트(그림 · 설명)를 보고 낱말을 통째로 쳐서 맞힌다.
- * 한 판 20문제 · 1분 고정 — 다 풀거나 시간이 다 되면 끝. 모르면 Tab으로 넘긴다. 6초가 지나면 첫 글자가 열린다(점수 절반).
+ * 한 판 20문제 · 50초 고정 — 다 풀거나 시간이 다 되면 끝. 모르면 Tab으로 넘긴다. 6초가 지나면 첫 글자가 열린다(점수 절반).
  * 연달아 맞히면 타닥이가 머리 위 말풍선으로 알려 준다.
  * 한글 전용 — 낱말 언어와 상관없이 한글로 친다.
  */
@@ -82,7 +82,8 @@ export default function ChosungGame({ autoStart, onExit }) {
     g.current.over = true;
     const { score, solved, quiz, left } = g.current;
     const prev = getGameBest(bestKey);
-    const isBest = saveGameBest(bestKey, { score, level: Math.max(1, solved) });
+    // 20문제를 시간 안에 다 끝낸 판만 최고 점수 · 랭킹에 남긴다
+    const isBest = reason === 'done' && saveGameBest(bestKey, { score, level: Math.max(1, solved) });
     if (isBest) setBest(getGameBest(bestKey));
     setResult({ score, solved, reason, left, missed: reason === 'time' ? quiz.word : null, isBest, prev });
     setStatus('over');
@@ -121,10 +122,11 @@ export default function ChosungGame({ autoStart, onExit }) {
     game.talk = null;
     game.mood = { type: 'sad', until: game.clock + MOOD_SECONDS };
     nextQuiz(game, false);
+    setTyped(''); // 치다 만 글자가 다음 문제로 넘어가 오답이 되지 않게
     rerender();
   };
 
-  const { inputProps } = useGameInput({
+  const { inputProps, setValue: setTyped } = useGameInput({
     mode,
     onSubmit: (text) => {
       if (status !== 'playing') return;
@@ -160,7 +162,7 @@ export default function ChosungGame({ autoStart, onExit }) {
         return true;
       }
       if (e.key === 'Tab') {
-        pass();
+        if (!e.repeat) pass(); // 누르고 있어도 한 문제만 넘긴다
         return true;
       }
       return false;
@@ -172,7 +174,10 @@ export default function ChosungGame({ autoStart, onExit }) {
   const hinted = game.asked >= HINT_AFTER_SECONDS;
   const mood = game.mood?.type ?? 'idle';
   // 첫 글자가 열리면 초성 첫 칸을 그 글자로 바꿔 보여 준다
-  const tiles = [...quiz.chosung].map((c, i) => (hinted && i === 0 ? quiz.word[0] : c));
+  // 시작 전 · 카운트다운 중엔 문제를 가린다 — 시간이 흐르기 전에 미리 풀 수 없게
+  const veiled = status === 'ready' || status === 'countdown';
+  // 가릴 땐 글자 수 · 주제도 숨긴다 (칸 수로 미리 짐작하지 못하게 늘 3칸)
+  const tiles = veiled ? ['?', '?', '?'] : [...quiz.chosung].map((c, i) => (hinted && i === 0 ? quiz.word[0] : c));
 
   return (
     <div className="game">
@@ -189,15 +194,21 @@ export default function ChosungGame({ autoStart, onExit }) {
 
       <div className="game__field quiz-field">
         <div className="quiz-card" key={quiz.word}>
-          <span className="quiz-card__topic">{quiz.topic}</span>
-          <div className="quiz-card__tiles" aria-label={`초성 ${quiz.chosung}`} style={{ '--count': tiles.length }}>
+          <span className="quiz-card__topic">{veiled ? '?' : quiz.topic}</span>
+          <div
+            className="quiz-card__tiles"
+            aria-label={veiled ? '시작하면 문제가 나와요' : `초성 ${quiz.chosung}`}
+            style={{ '--count': tiles.length }}
+          >
             {tiles.map((c, i) => (
               <span key={i} className={`quiz-tile ${hinted && i === 0 ? 'is-open' : ''}`}>
                 {c}
               </span>
             ))}
           </div>
-          {quiz.icon ? (
+          {veiled ? (
+            <p className="quiz-card__hint">💡 시작하면 문제가 나와요</p>
+          ) : quiz.icon ? (
             <span className="quiz-card__icon" aria-label={`그림 힌트 ${quiz.icon}`}>
               {quiz.icon}
             </span>
@@ -251,7 +262,8 @@ export default function ChosungGame({ autoStart, onExit }) {
             rules={[
               ['⌨️', '낱말을 끝까지 다 치고 Enter 또는 스페이스'],
               ['📋', `한 판에 ${TOTAL_QUESTIONS}문제 · 다 풀면 끝`],
-              ['⏱️', '시간은 1분 고정 — 맞히거나 넘겨도 시간은 그대로예요'],
+              ['⏱️', `시간은 ${GAME_SECONDS}초 고정 — 맞히거나 넘겨도 시간은 그대로예요`],
+              ['🏆', `${TOTAL_QUESTIONS}문제를 시간 안에 다 끝내야 점수가 기록 · 랭킹에 남아요`],
               ['⏭️', '모르겠으면 Tab으로 넘기기'],
               ['🔓', `${HINT_AFTER_SECONDS}초가 지나면 첫 글자가 열려요 (점수 절반)`],
               ['⚡', `${QUICK_SECONDS}초 안에 맞히면 번개 보너스 · 연속으로 맞힐수록 점수 UP (타닥이가 말풍선으로 알려 줘요)`],
@@ -297,7 +309,11 @@ export default function ChosungGame({ autoStart, onExit }) {
           ) : (
             result.prev && <p>최고 점수 {result.prev.score}점</p>
           )}
-          <RankNote game="chosung" mode={mode} score={result.score} level={Math.max(1, result.solved)} />
+          {result.reason === 'done' ? (
+            <RankNote game="chosung" mode={mode} score={result.score} level={Math.max(1, result.solved)} />
+          ) : (
+            <p className="rank-note">🏆 {TOTAL_QUESTIONS}문제를 시간 안에 다 끝내면 점수가 랭킹에 올라가요</p>
+          )}
         </GameOverlay>
       )}
     </div>

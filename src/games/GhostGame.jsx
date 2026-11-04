@@ -6,13 +6,20 @@ import { Banner, Countdown, GameGuide, LangPicker, showBanner, pruneEffects } fr
 import useGameLoop from './useGameLoop';
 import Mascot from '../components/Mascot';
 import TypingBoard from '../components/TypingBoard';
-import { pickSentences } from '../data/sentences';
 import { calcSpeed, countStrokes } from '../utils/calculate';
 import { isPrefix, toKeystrokes } from '../utils/hangul';
 import { AUTO_LANG, applyKey } from '../utils/hangulInput';
 import { getBest, getGameBest, getGhost, saveGameBest, saveGhost } from '../utils/storage';
+import { isBetter, scoreText } from '../data/games';
 import { playKey } from '../utils/sound';
 
+// 코스는 언어마다 고정 — 기록이 도착 시간이라 판마다 문장(길이)이 바뀌면 운으로 순위가 갈린다.
+// 문장 목록에서 길이가 가운데쯤인 3개 (한글 118타 · 영어 100타). 바꾸면 기존 기록과 비교가 안 되니 COURSE_ID도 올린다.
+const COURSE = {
+  ko: ['오늘 할 일을 내일로 미루지 말자.', '천 리 길도 한 걸음부터 시작된다.', '하늘이 무너져도 솟아날 구멍이 있다.'],
+  en: ['Every expert was once a beginner.', 'Small habits lead to big changes.', 'Accuracy first, speed will follow.'],
+};
+const COURSE_ID = 1;
 const COURSE_SENTENCES = 3; // 한 판에 달리는 문장 수
 const TRACE_STEP = 0.25; // 유령 기록 간격(초)
 const DEFAULT_GHOST_SPEED = 150; // 기록이 하나도 없을 때 유령 타수 (GHOST_PACE를 곱하기 전)
@@ -69,10 +76,10 @@ function chooseGhost(mode) {
   const practice = getBest(mode);
   const paced = (speed) => Math.round(speed * GHOST_PACE);
   if (own && (!practice || own.speed >= practice.speed)) {
-    return { trace: smoothTrace(own.trace), speed: paced(own.speed), source: '고스트 레이스 내 최고 기록' };
+    return { trace: smoothTrace(own.trace), speed: paced(own.speed), source: '내 최고 기록' };
   }
-  if (practice) return { speed: paced(practice.speed), trace: null, source: '단문 연습 내 최고 기록' };
-  return { speed: paced(DEFAULT_GHOST_SPEED), trace: null, source: '아직 기록이 없어 기본 유령' };
+  if (practice) return { speed: paced(practice.speed), trace: null, source: '단문 최고 기록' };
+  return { speed: paced(DEFAULT_GHOST_SPEED), trace: null, source: '기본 유령' }; // 출처 문구는 폰 HUD 칸에서 잘리지 않게 짧게
 }
 
 /** 기록(trace)을 GHOST_PACE배 빨리 감아 t초에 친 타수 — 기록이 끝나면 평균 속도로 이어 간다 */
@@ -105,7 +112,7 @@ function ghostFinishTime(ghost, total) {
 }
 
 const freshGame = (mode) => {
-  const course = pickSentences(mode, COURSE_SENTENCES);
+  const course = COURSE[mode];
   const strokes = course.map(sentenceStrokes);
   return {
     course,
@@ -190,10 +197,14 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
     const plausible = speed <= MAX_PLAUSIBLE_SPEED;
     const trace = [...game.trace, game.total];
     const newGhost = plausible && saveGhost(mode, { speed, time, strokes: game.total, trace });
+    // 기록 = 도착 시간(ms) — 유령을 이긴 판만 최고 기록 · 랭킹에 남긴다
+    const ms = Math.round(time * 1000);
+    const counts = win && plausible;
     const prev = getGameBest(bestKey);
-    const isBest = plausible && saveGameBest(bestKey, { score: speed, level: COURSE_SENTENCES });
+    const isBest =
+      counts && saveGameBest(bestKey, { score: ms, level: COURSE_SENTENCES, ms: true, course: COURSE_ID }, (a, b) => isBetter('ghost', a, b));
     if (isBest) setBest(getGameBest(bestKey));
-    setResult({ time, speed, ghostTime, ghostSpeed: game.ghost.speed, win, newGhost, isBest, prev, plausible });
+    setResult({ time, ms, speed, ghostTime, ghostSpeed: game.ghost.speed, win, newGhost, isBest, prev, plausible, counts });
     setStatus('over');
   };
 
@@ -326,7 +337,7 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
     <div className="game">
       <div className="game__hud">
         <GameStat label="시간" value={`${game.clock.toFixed(1)}초`} />
-        <GameStat label="지금 타수" value={racing ? speed : 0} sub={`최고 ${best ? best.score : 0}타`} />
+        <GameStat label="지금 타수" value={racing ? speed : 0} sub={`최고 ${best ? scoreText('ghost', best.score) : '없음'}`} />
         <GameStat label="유령" value={`${game.ghost.speed}타`} sub={game.ghost.source} />
         <GameStat label="문장" value={`${Math.min(game.index + 1, COURSE_SENTENCES)}/${COURSE_SENTENCES}`} />
       </div>
@@ -405,9 +416,9 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
               `이번 유령: ${game.ghost.source} ${game.ghost.speed}타`,
             ]}
             rules={[
-              ['⌨️', `문장 ${COURSE_SENTENCES}개를 차례로 치고 스페이스 · Enter로 다음 문장`],
+              ['⌨️', `늘 같은 문장 ${COURSE_SENTENCES}개 코스 — 차례로 치고 스페이스 · Enter로 다음 문장`],
               ['✏️', '오타가 있으면 막대가 멈춰요 — 고쳐야 다시 나아가요'],
-              ['🏁', '유령보다 먼저 결승선에 닿으면 승리'],
+              ['🏁', '유령보다 먼저 결승선에 닿으면 승리 — 이긴 판만 도착 시간이 기록 · 랭킹에 남아요'],
               ['👻', '더 빠르게 달리면 이번 판이 다음 판의 유령이 돼요'],
             ]}
             items={[
@@ -442,15 +453,21 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
           primary={{ label: '다시 하기', onClick: start }}
           secondary={{ label: '게임 목록', onClick: onExit }}
         >
-          <p className="game-overlay__score">{result.speed}타</p>
+          <p className="game-overlay__score">{scoreText('ghost', result.ms)}</p>
           <p>
             나 {result.time.toFixed(1)}초 · 유령 {result.ghostTime.toFixed(1)}초 (
             {result.win ? `${(result.ghostTime - result.time).toFixed(1)}초 먼저` : `${(result.time - result.ghostTime).toFixed(1)}초 늦게`})
           </p>
           {result.newGhost && <p className="game-overlay__best">👻 이번 판이 새 유령이 됐어요!</p>}
           {!result.plausible && <p>너무 빨라서 기록에 넣지 않았어요</p>}
-          {!result.isBest && result.prev && <p>최고 기록 {result.prev.score}타</p>}
-          <RankNote game="ghost" mode={mode} score={result.plausible ? result.speed : 0} level={COURSE_SENTENCES} />
+          {result.isBest && <p className="game-overlay__best">최고 기록!</p>}
+          {!result.isBest && result.prev && <p>최고 기록 {scoreText('ghost', result.prev.score)}</p>}
+          <p>평균 {result.speed}타</p>
+          {result.counts ? (
+            <RankNote game="ghost" mode={mode} score={result.ms} level={COURSE_SENTENCES} />
+          ) : (
+            result.plausible && <p className="rank-note">🏆 유령을 이기면 도착 시간이 랭킹에 올라가요</p>
+          )}
         </GameOverlay>
       )}
     </div>

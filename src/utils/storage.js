@@ -56,15 +56,21 @@ function readGames() {
 
 /** key: `${게임}:${언어}` — { score, level, date } */
 export function getGameBest(key) {
-  return readGames()[key] ?? null;
+  const record = readGames()[key] ?? null;
+  // 고스트 레이스는 고정 코스 도착 시간(ms) — 예전 기록(타수 · 무작위 코스, course 표시 없음)은 없는 셈 친다
+  if (key.startsWith('ghost:') && record && record.course !== 1) return null; // 1 = GhostGame.jsx의 COURSE_ID
+  return record;
 }
 
-/** 점수가 최고 점수보다 높으면 저장하고 true를 돌려준다. (0점 판은 저장하지 않는다) */
-export function saveGameBest(key, record) {
+/**
+ * 최고 기록보다 좋으면 저장하고 true를 돌려준다. (0점 판은 저장하지 않는다)
+ * better(a, b): a가 b보다 좋은가 — 기본은 클수록, 시간 게임은 data/games.js의 isBetter를 넘긴다
+ */
+export function saveGameBest(key, record, better = (a, b) => a > b) {
   if (record.score <= 0) return false;
   const all = readGames();
-  const prev = all[key];
-  if (prev && prev.score >= record.score) return false;
+  const prev = getGameBest(key);
+  if (prev && !better(record.score, prev.score)) return false;
 
   all[key] = { ...record, date: new Date().toISOString() };
   try {

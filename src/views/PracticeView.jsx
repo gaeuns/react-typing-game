@@ -89,6 +89,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   const inputRef = useRef(null);
   const composingRef = useRef(false); // 이벤트 핸들러 안에서 최신 조합 상태를 읽기 위한 ref
   const advanceAfterCompose = useRef(false); // 마지막 글자를 조합하는 중에 스페이스 · Enter를 눌렀다
+  const advancedAt = useRef(0); // 다음 문장으로 넘어간 시각 — 넘기자마자 한 번 더 누른 스페이스만 무시하려고
 
   const items = round.items;
   const target = items[index];
@@ -155,6 +156,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     setRoundId((id) => id + 1);
     setIndex(0);
     setInput('');
+    advancedAt.current = Date.now();
     setIsComposing(false);
     composingRef.current = false;
     setTotals(EMPTY_TOTALS);
@@ -247,6 +249,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     };
     setTotals(nextTotals);
     setInput('');
+    advancedAt.current = Date.now();
     composingRef.current = false;
     setIsComposing(false);
 
@@ -269,8 +272,8 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     let value = e.target.value;
     const composing = composingRef.current || e.nativeEvent.isComposing;
 
-    // 문장을 넘기자마자 습관적으로 누른 스페이스는 무시
-    if (input === '' && value === ' ') return;
+    // 문장을 넘기자마자(0.4초 안) 습관적으로 한 번 더 누른 스페이스만 무시 — 그 뒤 스페이스는 틀린 글자로 센다
+    if (input === '' && value === ' ' && Date.now() - advancedAt.current < 400) return;
 
     // 조합 중이 아닐 때만 길이를 자른다 (조합 중에 값을 바꾸면 IME가 깨짐)
     if (!composing && value.length > target.length) {
@@ -290,7 +293,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
 
   // 한/영 자동 — keydown에서 만든 입력값을 반영한다 (입력기 대신 직접 조합)
   const applyTyped = ({ text, composing }) => {
-    if (input === '' && text === ' ') return; // 문장을 넘기자마자 습관적으로 누른 스페이스
+    if (input === '' && text === ' ' && Date.now() - advancedAt.current < 400) return; // 넘기자마자 한 번 더 누른 스페이스
     if (text.length > target.length) return; // 문장보다 길게는 못 친다
     timer.start();
     composingRef.current = composing;
