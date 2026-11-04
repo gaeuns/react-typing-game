@@ -3762,10 +3762,20 @@ kbd {
   color: var(--accent-ink);
 }
 
-/* 판 옆에 작게 서 있는 타닥이 (말풍선 없이) */
+/* 판 옆에 작게 서 있는 타닥이 — 머리 위는 연속 정답 말풍선 자리 (말풍선이 없어도 비워 둬서 판이 들썩이지 않게) */
 .quiz-side .mascot {
   width: 88px;
-  padding-top: 0;
+  padding-top: 44px;
+}
+
+.quiz-side .mascot__bubble {
+  right: auto;
+  left: 50%;
+  translate: -50% 0; /* 등장 애니메이션(transform)과 겹치지 않게 translate로 가운데 */
+}
+
+.quiz-side .mascot__bubble::after {
+  right: calc(50% - 5px);
 }
 
 /* ─── 초성 퀴즈 ──────────────────────────────────────────────── */

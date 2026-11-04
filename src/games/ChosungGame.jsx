@@ -10,24 +10,26 @@ import { pickQuiz } from '../data/chosungQuiz';
 import { getGameBest, saveGameBest } from '../utils/storage';
 import { widthUnits } from '../utils/textWidth';
 
-const START_SECONDS = 60;
-const MAX_SECONDS = 90;
-const TIME_BONUS_SECONDS = 2; // 맞히면 남은 시간 +
-const PASS_PENALTY_SECONDS = 3; // 넘기면 남은 시간 -
+const GAME_SECONDS = 60; // 맞히든 넘기든 시간은 그대로 — 1분 고정
+const TOTAL_QUESTIONS = 20; // 한 판 문제 수 — 다 풀면 시간이 남아도 끝
 const HINT_AFTER_SECONDS = 6; // 이만큼 못 맞히면 첫 글자를 보여 준다 (점수는 절반)
 const QUICK_SECONDS = 3; // 이 안에 맞히면 번개 보너스
 const MOOD_SECONDS = 0.8; // 맞힘 · 틀림 표정을 보여 주는 시간
+const TALK_SECONDS = 1.6; // 연속 정답 말풍선을 보여 주는 시간
+const TALK_FROM_COMBO = 2; // 이만큼 연달아 맞히면 타닥이가 말풍선으로 알려 준다
 
 const freshGame = () => ({
   quiz: pickQuiz(),
   asked: 0, // 지금 문제를 낸 뒤 흐른 초
-  left: START_SECONDS,
+  left: GAME_SECONDS,
+  done: 0, // 맞히거나 넘긴 문제 수
   clock: 0,
   score: 0,
   combo: 0,
   solved: 0,
   history: [], // 최근 문제 [{ id, word, ok }]
   mood: null, // { type: 'happy' | 'sad', until }
+  talk: null, // 타닥이 말풍선 { text, until }
   popups: [],
   banner: null,
   nextId: 1,
@@ -36,7 +38,8 @@ const freshGame = () => ({
 
 /**
  * 초성 퀴즈 — ㅌㅈㅇㅅ 같은 초성과 힌트(그림 · 설명)를 보고 낱말을 통째로 쳐서 맞힌다.
- * 60초에서 시작해 맞히면 +2초, 넘기면(Tab) -3초. 6초가 지나면 첫 글자가 열린다(점수 절반).
+ * 한 판 20문제 · 1분 고정 — 다 풀거나 시간이 다 되면 끝. 모르면 Tab으로 넘긴다. 6초가 지나면 첫 글자가 열린다(점수 절반).
+ * 연달아 맞히면 타닥이가 머리 위 말풍선으로 알려 준다.
  * 한글 전용 — 낱말 언어와 상관없이 한글로 친다.
  */
 export default function ChosungGame({ autoStart, onExit }) {
@@ -60,7 +63,7 @@ export default function ChosungGame({ autoStart, onExit }) {
   };
 
   const begin = () => {
-    showBanner(g.current, '🔤 초성 퀴즈', `${START_SECONDS}초 안에 많이 맞혀요!`);
+    showBanner(g.current, '🔤 초성 퀴즈', `${TOTAL_QUESTIONS}문제 · 1분 안에 많이 맞혀요!`);
     setStatus('playing');
     focusInput();
   };
@@ -74,19 +77,25 @@ export default function ChosungGame({ autoStart, onExit }) {
     focusInput();
   };
 
-  const gameOver = () => {
+  // reason: 'time'(시간이 다 됨) | 'done'(20문제를 다 풂)
+  const gameOver = (reason) => {
     if (g.current.over) return;
     g.current.over = true;
-    const { score, solved, quiz } = g.current;
+    const { score, solved, quiz, left } = g.current;
     const prev = getGameBest(bestKey);
     const isBest = saveGameBest(bestKey, { score, level: Math.max(1, solved) });
     if (isBest) setBest(getGameBest(bestKey));
-    setResult({ score, solved, missed: quiz.word, isBest, prev });
+    setResult({ score, solved, reason, left, missed: reason === 'time' ? quiz.word : null, isBest, prev });
     setStatus('over');
   };
 
   const nextQuiz = (game, ok) => {
     game.history = [{ id: game.nextId++, word: game.quiz.word, ok }, ...game.history].slice(0, 6);
+    game.done += 1;
+    if (game.done >= TOTAL_QUESTIONS) {
+      gameOver('done');
+      return;
+    }
     game.quiz = pickQuiz();
     game.asked = 0;
   };
@@ -97,9 +106,10 @@ export default function ChosungGame({ autoStart, onExit }) {
     game.asked += dt;
     game.left -= dt;
     if (game.mood && game.clock > game.mood.until) game.mood = null;
+    if (game.talk && game.clock > game.talk.until) game.talk = null;
     if (game.left <= 0) {
       game.left = 0;
-      gameOver();
+      gameOver('time');
     }
     pruneEffects(game);
     rerender();
@@ -108,8 +118,8 @@ export default function ChosungGame({ autoStart, onExit }) {
   const pass = () => {
     const game = g.current;
     addPopup(game, `넘김 · 정답 「${game.quiz.word}」`, 50, 18, 'bad');
-    game.left = Math.max(0.1, game.left - PASS_PENALTY_SECONDS);
     game.combo = 0;
+    game.talk = null;
     game.mood = { type: 'sad', until: game.clock + MOOD_SECONDS };
     nextQuiz(game, false);
     rerender();
@@ -122,6 +132,7 @@ export default function ChosungGame({ autoStart, onExit }) {
       const game = g.current;
       if (text !== game.quiz.word) {
         game.combo = 0;
+        game.talk = null;
         game.mood = { type: 'sad', until: game.clock + MOOD_SECONDS };
         setIsMiss(true);
         rerender();
@@ -134,11 +145,12 @@ export default function ChosungGame({ autoStart, onExit }) {
       const base = 10 + 5 * text.length + (quick ? 15 : 0) + Math.min(game.combo, 10) * 2;
       const gain = hinted ? Math.round(base / 2) : base;
       game.score += gain;
-      game.left = Math.min(MAX_SECONDS, game.left + TIME_BONUS_SECONDS);
       game.mood = { type: game.combo >= 5 ? 'cheer' : 'happy', until: game.clock + MOOD_SECONDS };
       addPopup(game, `+${gain}${quick ? ' ⚡' : ''}`, 50, 18, quick ? 'fever' : null);
-      addPopup(game, `⏱️ +${TIME_BONUS_SECONDS}초`, 50, 30, 'good');
-      if (game.combo % 5 === 0) showBanner(game, `🔥 ${game.combo}연속!`, '연속으로 맞힐수록 점수가 올라요');
+      if (game.combo >= TALK_FROM_COMBO) {
+        const text = game.combo % 5 === 0 ? `${game.combo}연속! 대단해요 ✨` : `🔥 ${game.combo}연속 정답!`;
+        game.talk = { text, until: game.clock + TALK_SECONDS };
+      }
       nextQuiz(game, true);
       rerender();
     },
@@ -169,12 +181,16 @@ export default function ChosungGame({ autoStart, onExit }) {
         <GameStat label="남은 시간" value={`${Math.ceil(game.left)}초`} />
         <GameStat label="점수" value={game.score} sub={`최고 ${best ? best.score : 0}`} />
         <GameStat label="연속" value={game.combo} />
-        <GameStat label="맞힌 문제" value={game.solved} />
+        <GameStat
+          label="문제"
+          value={`${Math.min(game.done + 1, TOTAL_QUESTIONS)}/${TOTAL_QUESTIONS}`}
+          sub={`맞힘 ${game.solved}`}
+        />
       </div>
 
       <DangerBar
-        label={game.left < 10 ? '⚠️ 시간이 얼마 안 남았어요' : `⏱️ 맞히면 +${TIME_BONUS_SECONDS}초 · Tab으로 넘기면 -${PASS_PENALTY_SECONDS}초`}
-        ratio={status === 'playing' ? 1 - game.left / START_SECONDS : 0}
+        label={game.left < 10 ? '⚠️ 시간이 얼마 안 남았어요' : `⏱️ 1분 동안 ${TOTAL_QUESTIONS}문제 · 모르면 Tab으로 넘기기`}
+        ratio={status === 'playing' ? 1 - game.left / GAME_SECONDS : 0}
         hot={game.left < 10}
         detail={status === 'playing' ? `${game.left.toFixed(1)}초` : null}
       />
@@ -205,7 +221,7 @@ export default function ChosungGame({ autoStart, onExit }) {
         </div>
 
         <div className="quiz-side">
-          <Mascot mood={mood} beat={game.solved} bubble={false} />
+          <Mascot mood={mood} beat={game.solved} bubble={!!game.talk} line={game.talk?.text} />
           <ol className="quiz-history" aria-label="지난 문제">
             {game.history.map((h) => (
               <li key={h.id} className={h.ok ? 'is-ok' : 'is-miss'}>
@@ -243,10 +259,11 @@ export default function ChosungGame({ autoStart, onExit }) {
             ]}
             rules={[
               ['⌨️', '낱말을 끝까지 다 치고 Enter 또는 스페이스'],
-              ['⏱️', `${START_SECONDS}초에서 시작 · 맞히면 +${TIME_BONUS_SECONDS}초`],
-              ['⏭️', `모르겠으면 Tab으로 넘기기 · 대신 -${PASS_PENALTY_SECONDS}초`],
+              ['📋', `한 판에 ${TOTAL_QUESTIONS}문제 · 다 풀면 끝`],
+              ['⏱️', '시간은 1분 고정 — 맞히거나 넘겨도 시간은 그대로예요'],
+              ['⏭️', '모르겠으면 Tab으로 넘기기'],
               ['🔓', `${HINT_AFTER_SECONDS}초가 지나면 첫 글자가 열려요 (점수 절반)`],
-              ['⚡', `${QUICK_SECONDS}초 안에 맞히면 번개 보너스 · 연속으로 맞힐수록 점수 UP`],
+              ['⚡', `${QUICK_SECONDS}초 안에 맞히면 번개 보너스 · 연속으로 맞힐수록 점수 UP (타닥이가 말풍선으로 알려 줘요)`],
             ]}
             items={[
               {
@@ -274,14 +291,15 @@ export default function ChosungGame({ autoStart, onExit }) {
       )}
       {status === 'over' && result && (
         <GameOverlay
-          title="시간 끝!"
+          title={result.reason === 'done' ? '🎉 20문제 완료!' : '⏰ 시간 끝!'}
           tone="over"
           primary={{ label: '다시 하기', onClick: start }}
           secondary={{ label: '게임 목록', onClick: onExit }}
         >
           <p className="game-overlay__score">{result.score}점</p>
           <p>
-            {result.solved}문제 맞힘 · 마지막 문제 정답은 「{result.missed}」
+            {TOTAL_QUESTIONS}문제 중 {result.solved}문제 맞힘
+            {result.reason === 'done' ? ` · ${Math.ceil(result.left)}초 남기고 끝` : ` · 마지막 문제 정답은 「${result.missed}」`}
           </p>
           {result.isBest ? (
             <p className="game-overlay__best">최고 점수!</p>
