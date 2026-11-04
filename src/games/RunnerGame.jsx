@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
 import RankNote from './RankNote';
 import GameStat from './GameStat';
-import { Banner, Countdown, DangerBar, GameGuide, LangPicker, Popups, addPopup, pruneEffects, showBanner } from './GameBits';
+import { Banner, Countdown, GameGuide, LangPicker, Popups, addPopup, pruneEffects, showBanner } from './GameBits';
 import useGameInput from './useGameInput';
 import useGameLoop from './useGameLoop';
 import Mascot, { MAX_WOUNDS } from '../components/Mascot';
@@ -286,11 +286,10 @@ export default function RunnerGame({ mode, autoStart, onModeChange, onExit }) {
   if (status === 'ready' || status === 'countdown') mood = 'idle';
   else if (!game.mood && (star || game.combo >= 10)) mood = 'cheer';
 
-  // 아직 안 친 장애물 중 가장 가까운 것 — 이게 부딪히면 반창고
+  // 아직 안 친 장애물 중 가장 가까운 것 — 이게 부딪히면 반창고 (판에서 주황 테두리로 보여 준다)
   const next = game.obstacles
     .filter((o) => !o.item && !o.cleared && !o.crashed && o.x > HIT_X)
     .sort((a, b) => a.x - b.x)[0];
-  const closeness = next ? 1 - (next.x - HIT_X) / (SPAWN_X - HIT_X) : 0;
   const width = fieldRef.current?.clientWidth || 800;
 
   return (
@@ -305,17 +304,6 @@ export default function RunnerGame({ mode, autoStart, onModeChange, onExit }) {
           sub={`${MAX_WOUNDS}개면 끝`}
         />
       </div>
-
-      <DangerBar
-        label={
-          star
-            ? `⭐ 무적 ${Math.ceil(game.starUntil - game.clock)}초 — 장애물을 알아서 넘어요`
-            : `🩹 반창고 ${game.wounds}/${MAX_WOUNDS} — 장애물에 부딪히면 하나씩 붙어요`
-        }
-        ratio={status === 'playing' && !star ? closeness : 0}
-        hot={!star && closeness > 0.7}
-        detail={next && status === 'playing' && !star ? `다음 「${next.word}」` : null}
-      />
 
       <div ref={fieldRef} className="game__field runner-field" style={{ '--jump': jump }}>
         {CLOUDS.map((c, i) => {
@@ -379,6 +367,7 @@ export default function RunnerGame({ mode, autoStart, onModeChange, onExit }) {
           <Mascot mood={mood} beat={game.cleared} wounds={game.wounds} bubble={!!game.talk} line={game.talk?.text} />
         </div>
 
+        {star && <span className="runner-field__star">⭐ 무적 {Math.ceil(game.starUntil - game.clock)}초</span>}
         <Popups popups={game.popups} />
         <Banner banner={game.banner} />
       </div>

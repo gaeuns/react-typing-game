@@ -4321,6 +4321,21 @@ kbd {
   filter: drop-shadow(0 0 6px #fbbf24) drop-shadow(0 0 12px #fde68a);
 }
 
+/* 무적 남은 시간 — 판 위쪽 가운데 (냠냠 디펜스 슬로우 표시와 같은 모양) */
+.runner-field__star {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 3;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+
 /* 게임 오버 창 — 반창고 다섯 개 붙은 타닥이 */
 .runner-result {
   display: flex;
