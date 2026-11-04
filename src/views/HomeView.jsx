@@ -3,10 +3,11 @@ import AuthCard from '../components/AuthCard';
 import TypingDemo from '../components/TypingDemo';
 import HomeIllustration from '../components/HomeIllustration';
 import LiveRanking from '../components/LiveRanking';
+import { GAMES } from '../data/games';
 
 const FEATURES = [
   ['⌨️', '자리 · 낱말 · 단문 · 장문 · 60초'],
-  ['🎮', '타자 게임 5종'],
+  ['🎮', `타자 게임 ${GAMES.length}종`],
   ['🏆', '실시간 랭킹'],
 ];
 

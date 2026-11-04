@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { GAMES, gamesFor, scoreText } from '../data/games';
+import { GAMES, gamesFor, isBetter, scoreText } from '../data/games';
 import { fetchRanking, medalClass } from '../utils/ranking';
 import { supabase } from '../utils/supabase';
 
@@ -58,7 +58,7 @@ export default function LiveRanking({ mode }) {
           const before = Array.isArray(boardsRef.current[row.game])
             ? boardsRef.current[row.game].find((r) => r.user_id === row.user_id)
             : null;
-          if (hit && !(before && before.score >= row.score)) setNews({ game: row.game, userId: row.user_id, nickname: hit.nickname, score: row.score });
+          if (hit && !(before && !isBetter(row.game, row.score, before.score))) setNews({ game: row.game, userId: row.user_id, nickname: hit.nickname, score: row.score });
         });
       })
       .subscribe((status) => setLive(status === 'SUBSCRIBED'));
@@ -121,7 +121,8 @@ export default function LiveRanking({ mode }) {
                     >
                       <span className="live-ranking__rank">{MEDALS[r.rank - 1] ?? r.rank}</span>
                       <span className="live-ranking__name">{r.nickname}</span>
-                      <span className="live-ranking__score">{r.score.toLocaleString()}</span>
+                      {/* 좁은 칸이라 단위는 빼되, 시간 게임(고스트)은 "9.00초"로 */}
+                      <span className="live-ranking__score">{g.time ? scoreText(g.id, r.score) : r.score.toLocaleString()}</span>
                     </li>
                   ))}
                 </ol>

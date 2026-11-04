@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { fetchMyRank, submitScore } from '../utils/ranking';
+import { isBetter, scoreText } from '../data/games';
 
 /**
  * 게임 오버 창의 랭킹 한 줄 — 로그인했으면 점수를 올리고 내 순위를, 아니면 로그인 안내를 보여 준다.
@@ -27,7 +28,7 @@ export default function RankNote({ game, mode, score, level }) {
   return (
     <p className="rank-note">
       🏆 랭킹 <strong>{state.mine?.rank ?? '-'}위</strong>
-      {state.mine && state.mine.score > score && ` · 내 최고 ${state.mine.score}점`}
+      {state.mine && isBetter(game, state.mine.score, score) && ` · 내 최고 ${scoreText(game, state.mine.score)}`}
     </p>
   );
 }
