@@ -167,7 +167,6 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
   };
 
   const begin = () => {
-    showBanner(g.current, '👻 출발!', `유령 ${g.current.ghost.speed}타와 경주`);
     setStatus('playing');
     focusInput();
   };

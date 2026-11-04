@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
 import RankNote from './RankNote';
 import GameStat from './GameStat';
-import { Banner, Countdown, DangerBar, GameGuide, Popups, addPopup, pruneEffects, showBanner } from './GameBits';
+import { Countdown, DangerBar, GameGuide, Popups, addPopup, pruneEffects } from './GameBits';
 import useGameInput from './useGameInput';
 import useGameLoop from './useGameLoop';
 import Mascot from '../components/Mascot';
@@ -63,7 +63,6 @@ export default function ChosungGame({ autoStart, onExit }) {
   };
 
   const begin = () => {
-    showBanner(g.current, '🔤 초성 퀴즈', `${TOTAL_QUESTIONS}문제 · 1분 안에 많이 맞혀요!`);
     setStatus('playing');
     focusInput();
   };
@@ -231,7 +230,6 @@ export default function ChosungGame({ autoStart, onExit }) {
           </ol>
         </div>
         <Popups popups={game.popups} />
-        <Banner banner={game.banner} />
       </div>
 
       <div className="game__input-row">

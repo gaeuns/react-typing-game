@@ -110,7 +110,6 @@ export default function RainGame({ mode, autoStart, onModeChange, onExit }) {
     // 시작부터 여러 개가 떨어지고 있게
     for (let i = 0; i < START_ITEMS; i += 1) spawn(0.18 - i * 0.07);
     g.current.spawnIn = spawnEvery(1);
-    showBanner(g.current, 'STAGE 1', '빨간 선을 지켜라!');
     setStatus('playing');
     focusInput();
   };
