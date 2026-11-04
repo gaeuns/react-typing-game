@@ -6,6 +6,7 @@ import ResultModal from '../components/ResultModal';
 import KeyPractice from '../components/KeyPractice';
 import KeyboardView from '../components/KeyboardView';
 import ViewHeader from '../components/ViewHeader';
+import Mascot, { MAX_WOUNDS } from '../components/Mascot';
 import useTimer from '../hooks/useTimer';
 import { PRACTICE_KINDS, TIMED_MS, getPassage, passageTitles, pickRound } from '../data/practice';
 import { FINGER_NAME, STAGES, fingerOf, keyForStroke, keyLabel } from '../data/keyboard';
@@ -19,6 +20,7 @@ import { AUTO_LANG, applyKey } from '../utils/hangulInput';
 
 const EMPTY_TOTALS = { correctChars: 0, correctStrokes: 0, typedChars: 0 };
 const FLASH_MS = 300; // 누른 키를 맞음/틀림 색으로 보여주는 시간
+const CHEER_STREAK = 20; // 오타 없이 이만큼 연달아 맞히면 마스코트가 만세
 // 사람이 낼 수 없는 속도 — 폰 추천 낱말 탭처럼 한 번에 낱말이 통째로 들어온 판은 최고 기록에 넣지 않는다
 const MAX_PLAUSIBLE_SPEED = 2000;
 
@@ -103,6 +105,32 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   );
 
   const nextKey = useMemo(() => expectedKey(target, input, isComposing), [target, input, isComposing]);
+
+  // ─── 마스코트 기분 ────────────────────────────────────────────
+  // 지금 입력에 틀린 글자가 하나라도 있으면(조합 중인 글자가 목표에서 벗어난 것 포함) 시무룩
+  const composingChar = isComposing && input.length > 0 ? input[input.length - 1] : null;
+  const hasTypo =
+    current.typedChars > current.correctChars ||
+    (composingChar !== null &&
+      !isPrefix(toKeystrokes(composingChar), toKeystrokes(target.slice(input.length - 1, input.length + 1))));
+  const [streak, setStreak] = useState(0); // 오타 없이 연달아 맞힌 글자 수
+  const [wounds, setWounds] = useState(0); // 오타를 남긴 채 넘긴 문장 수 → 마스코트 반창고
+  const prevLength = useRef(0);
+  useEffect(() => {
+    const grew = input.length - prevLength.current;
+    prevLength.current = input.length;
+    if (hasTypo) setStreak(0);
+    else if (grew > 0) setStreak((n) => n + grew);
+  }, [input, hasTypo]);
+  useEffect(() => {
+    setStreak(0);
+    setWounds(0);
+    prevLength.current = 0;
+  }, [roundId]);
+  let mood = 'happy';
+  if (!timer.isRunning && index === 0 && input === '') mood = 'idle';
+  else if (hasTypo) mood = 'sad';
+  else if (streak >= CHEER_STREAK) mood = 'cheer';
 
   // 누른 키 표시는 잠깐만
   useEffect(() => {
@@ -210,6 +238,8 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   const completeSentence = (value) => {
     if (result) return; // 60초가 끝난 뒤 늦게 확정된 글자
     const stats = compareInput(target, value, false);
+    // 틀린 글자를 고치지 않고 넘기면 마스코트에 반창고 하나 (덜 친 채로 넘긴 것도 포함)
+    if (stats.correctChars < target.length) setWounds((n) => Math.min(n + 1, MAX_WOUNDS));
     const nextTotals = {
       correctChars: totals.correctChars + stats.correctChars,
       correctStrokes: totals.correctStrokes + stats.correctStrokes,
@@ -416,18 +446,21 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
               timeLimit={kind === 'timed' ? TIMED_MS : null}
             />
 
-            <TypingBoard
-              target={target}
-              input={input}
-              isComposing={isComposing}
-              title={round.title}
-              titles={kind === 'long' ? passageTitles(mode) : null}
-              onTitleChange={(title, { keepFocus }) => resetRound(mode, kind, { passage: title, focus: !keepFocus })}
-              onTitleDone={focusInput}
-              upcoming={items.slice(index + 1, index + 1 + (kind === 'words' ? 5 : kind === 'long' ? 2 : 1))}
-              upcomingLayout={kind === 'words' ? 'inline' : 'lines'}
-              onClick={focusInput}
-            />
+            <div className="board-stage">
+              <TypingBoard
+                target={target}
+                input={input}
+                isComposing={isComposing}
+                title={round.title}
+                titles={kind === 'long' ? passageTitles(mode) : null}
+                onTitleChange={(title, { keepFocus }) => resetRound(mode, kind, { passage: title, focus: !keepFocus })}
+                onTitleDone={focusInput}
+                upcoming={items.slice(index + 1, index + 1 + (kind === 'words' ? 5 : kind === 'long' ? 2 : 1))}
+                upcomingLayout={kind === 'words' ? 'inline' : 'lines'}
+                onClick={focusInput}
+              />
+              <Mascot mood={mood} beat={input.length} wounds={wounds} />
+            </div>
 
             <TypingInput
               ref={inputRef}
@@ -500,6 +533,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
           result={result}
           title={resultTitle}
           nextLabel={next.label}
+          wounds={wounds}
           onRestart={() => resetRound()}
           onNext={goNext}
         />
