@@ -247,6 +247,46 @@ const TUG_WORDS = {
   ],
 };
 
+// 🏃 타닥이 달리기 — 달리면서 바로 쳐야 해서 짧은 낱말 (길 · 자연 · 동물 · 달리기 · 탈것)
+const RUNNER_WORDS = {
+  ko: [
+    // 길 · 자연
+    '바위', '돌멩이', '나무', '풀잎', '꽃밭', '구름', '바람', '햇살', '언덕', '시냇물',
+    '다리', '터널', '모래', '자갈', '웅덩이', '나뭇잎', '도토리', '솔방울', '버섯', '이슬',
+    '무지개', '소나기', '눈송이', '별빛', '달빛', '새벽', '노을', '들판', '숲길', '산길',
+    '강물', '바다', '파도', '조개', '갈대', '연못', '폭포', '동굴', '절벽', '오아시스',
+    // 동물
+    '갈매기', '참새', '다람쥐', '토끼', '거북이', '달팽이', '개구리', '나비', '잠자리', '꿀벌',
+    '강아지', '고양이', '망아지', '병아리', '호랑이', '사자', '기린', '펭귄', '코끼리', '하마',
+    '여우', '곰돌이', '부엉이', '두더지', '고슴도치', '타조', '치타', '캥거루', '얼룩말', '사슴',
+    // 달리기
+    '점프', '달리기', '힘내', '출발', '도착', '속도', '질주', '가속', '전진', '통통',
+    '폴짝', '깡충', '쌩쌩', '씽씽', '후다닥', '헐레벌떡', '영차', '좋아', '파이팅', '결승선',
+    // 여행 · 탈것
+    '운동화', '모자', '배낭', '물병', '도시락', '지도', '나침반', '깃발', '풍선', '호루라기',
+    '자전거', '킥보드', '기차', '버스', '택시', '비행기', '자동차', '트럭', '썰매', '보트',
+  
+  ],
+  en: [
+    // road · nature
+    'rock', 'tree', 'leaf', 'hill', 'path', 'road', 'bridge', 'river', 'creek', 'stone',
+    'pebble', 'sand', 'cloud', 'wind', 'rain', 'snow', 'storm', 'sun', 'moon', 'star',
+    'sky', 'dawn', 'dusk', 'field', 'forest', 'trail', 'meadow', 'valley', 'cliff', 'cave',
+    'lake', 'pond', 'wave', 'shell', 'puddle', 'acorn', 'canyon', 'island', 'desert', 'oasis',
+    // animals
+    'bird', 'frog', 'fox', 'bear', 'deer', 'duck', 'goat', 'lamb', 'mole', 'owl',
+    'bee', 'ant', 'cat', 'dog', 'pony', 'tiger', 'lion', 'zebra', 'panda', 'koala',
+    'otter', 'snail', 'turtle', 'rabbit', 'squirrel', 'cheetah', 'ostrich', 'kangaroo', 'hedgehog', 'penguin',
+    // running
+    'jump', 'run', 'dash', 'sprint', 'hop', 'leap', 'skip', 'race', 'zoom', 'rush',
+    'fast', 'quick', 'swift', 'speed', 'boost', 'spring', 'bounce', 'glide', 'finish', 'start',
+    // travel
+    'shoe', 'cap', 'bag', 'map', 'flag', 'kite', 'ball', 'bike', 'train', 'bus',
+    'boat', 'truck', 'car', 'plane', 'sled', 'tent', 'rope', 'lamp', 'compass', 'whistle',
+  
+  ],
+};
+
 // 목록을 섞어 두고 차례로 꺼낸다(다 꺼내면 다시 섞기) — 한 바퀴 돌기 전엔 같은 낱말이 다시 나오지 않게
 const bags = new Map();
 
@@ -275,9 +315,11 @@ const pickFrom = (key, list, except) => {
   return list[Math.floor(Math.random() * list.length)];
 };
 
-/** 타임 어택 · 줄다리기 낱말 — 화면에 이미 있는 낱말(except)과 겹치지 않게 */
+const WORDS_BY_GAME = { speed: SPEED_WORDS, tug: TUG_WORDS, runner: RUNNER_WORDS };
+
+/** 타임 어택 · 줄다리기 · 타닥이 달리기 낱말 — 화면에 이미 있는 낱말(except)과 겹치지 않게 */
 export function pickGameWord(game, mode, except = []) {
-  const list = game === 'tug' ? TUG_WORDS[mode] : SPEED_WORDS[mode];
+  const list = (WORDS_BY_GAME[game] ?? SPEED_WORDS)[mode];
   return pickFrom(`${game}:${mode}`, list, except);
 }
 
@@ -300,5 +342,6 @@ export const PICTURE_WORDS = { foods: FOODS.ko, things: THINGS.ko };
 export const GAME_WORD_LISTS = {
   speed: SPEED_WORDS,
   tug: TUG_WORDS,
+  runner: RUNNER_WORDS,
   rain: { ko: FALLING.ko.map(([w]) => w), en: FALLING.en.map(([w]) => w) },
 };

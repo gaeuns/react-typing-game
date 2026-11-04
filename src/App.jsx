@@ -7,7 +7,7 @@ import GameView from './views/GameView';
 // 새로고침해도 보던 화면으로 — 이 탭에서만 기억 (sessionStorage, 막혀 있으면 홈부터)
 const PLACE_KEY = 'tadak:place';
 const VIEWS = ['home', 'practice', 'game'];
-const GAME_IDS = [null, 'speed', 'rain', 'tug', 'chosung', 'ghost'];
+const GAME_IDS = [null, 'speed', 'rain', 'tug', 'chosung', 'ghost', 'runner'];
 
 function loadPlace() {
   try {

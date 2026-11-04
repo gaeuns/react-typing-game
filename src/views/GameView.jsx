@@ -6,6 +6,7 @@ import RainGame from '../games/RainGame';
 import TugGame from '../games/TugGame';
 import ChosungGame from '../games/ChosungGame';
 import GhostGame from '../games/GhostGame';
+import RunnerGame from '../games/RunnerGame';
 import { GAMES, scoreText } from '../data/games';
 import { getGameBest } from '../utils/storage';
 
@@ -15,6 +16,7 @@ const GAME_COMPONENTS = {
   tug: TugGame,
   chosung: ChosungGame,
   ghost: GhostGame,
+  runner: RunnerGame,
 };
 
 /**
