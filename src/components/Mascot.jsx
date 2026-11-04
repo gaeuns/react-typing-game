@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 /**
  * 타자 옆에서 같이 반응해 주는 마스코트 '타닥이' (말랑한 떡 모양).
  *
@@ -8,7 +10,19 @@
  * - sad   : 오타가 있음 — 시무룩, 눈물 한 방울과 먹구름
  *
  * beat: 키를 칠 때마다 바뀌는 값 (입력 길이 등) — 바뀌면 몸이 한 번 말랑하게 눌린다
+ * wounds: 오타를 남긴 채 넘긴 문장 수 — 그만큼 반창고가 붙는다 (최대 MAX_WOUNDS개)
+ * bubble: false면 말풍선 없이 캐릭터만 (결과 창 등)
  */
+export const MAX_WOUNDS = 5;
+
+// 반창고 자리 — 얼굴(눈 · 볼 · 입)은 피해서 머리 · 옆구리 · 아랫배에
+const WOUND_SPOTS = [
+  { x: 72, y: 50, r: 28 },
+  { x: 34, y: 62, r: -24 },
+  { x: 90, y: 94, r: -40 },
+  { x: 30, y: 97, r: 22 },
+  { x: 60, y: 103, r: 8 },
+];
 const LINES = {
   idle: '같이 쳐 볼까요?',
   happy: '좋아요!',
@@ -16,15 +30,30 @@ const LINES = {
   sad: '앗… 틀렸어요',
 };
 
-export default function Mascot({ mood = 'idle', beat = 0 }) {
-  return (
-    <div className={`mascot mascot--${mood}`} role="img" aria-label={`마스코트: ${LINES[mood]}`}>
-      <span className="mascot__bubble" key={mood} aria-hidden="true">
-        {LINES[mood]}
-      </span>
+export default function Mascot({ mood = 'idle', beat = 0, wounds = 0, bubble = true }) {
+  const count = Math.min(wounds, MAX_WOUNDS);
+  const squishRef = useRef(null);
 
-      {/* key가 바뀌면 다시 마운트되어 말랑 애니메이션이 처음부터 재생된다 */}
-      <div className="mascot__squish" key={beat}>
+  // 키를 칠 때마다 말랑 애니메이션을 처음부터 다시 — 다시 마운트하지 않아서 반창고 애니메이션은 붙을 때 한 번만
+  useEffect(() => {
+    const el = squishRef.current;
+    if (!el || beat === 0) return;
+    el.classList.remove('is-squish');
+    void el.offsetWidth; // 리플로우를 일으켜야 같은 애니메이션이 다시 재생된다
+    el.classList.add('is-squish');
+  }, [beat]);
+
+  const label = `마스코트: ${LINES[mood]}${count ? ` (반창고 ${count}개)` : ''}`;
+
+  return (
+    <div className={`mascot mascot--${mood} ${bubble ? '' : 'mascot--no-bubble'}`} role="img" aria-label={label}>
+      {bubble && (
+        <span className="mascot__bubble" key={mood} aria-hidden="true">
+          {LINES[mood]}
+        </span>
+      )}
+
+      <div className="mascot__squish" ref={squishRef}>
         <svg className="mascot__svg" viewBox="0 0 120 120" aria-hidden="true">
           {/* 먹구름 (sad) */}
           <g className="mascot__cloud">
@@ -58,6 +87,20 @@ export default function Mascot({ mood = 'idle', beat = 0 }) {
           {/* 볼 */}
           <ellipse className="mascot__cheek" cx="38" cy="84" rx="7" ry="4.5" />
           <ellipse className="mascot__cheek" cx="82" cy="84" rx="7" ry="4.5" />
+
+          {/* 반창고 — 오타 낸 채로 넘긴 문장마다 하나씩 */}
+          {WOUND_SPOTS.slice(0, count).map(({ x, y, r }, i) => (
+            <g key={i} transform={`translate(${x} ${y}) rotate(${r})`}>
+              <g className="mascot__bandage">
+                <rect x="-10" y="-3.5" width="20" height="7" rx="3.5" />
+                <rect className="mascot__bandage-pad" x="-3.5" y="-3.5" width="7" height="7" />
+                <circle cx="-7" cy="-1" r="0.7" />
+                <circle cx="-7" cy="1.3" r="0.7" />
+                <circle cx="7" cy="-1" r="0.7" />
+                <circle cx="7" cy="1.3" r="0.7" />
+              </g>
+            </g>
+          ))}
 
           {/* 눈 — 기분마다 하나만 보인다 */}
           <g className="mascot__eyes mascot__eyes--open">

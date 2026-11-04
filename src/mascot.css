@@ -137,12 +137,33 @@
 .mascot--sad .mascot__tear { animation: mascot-tear 1.4s ease-in infinite; }
 .mascot--sad .mascot__cloud { animation: mascot-cloud 2s ease-in-out infinite; }
 
-/* 키 칠 때마다 한 번 말랑 (beat가 바뀌면 다시 마운트되어 재생) */
-.mascot--happy .mascot__squish,
-.mascot--cheer .mascot__squish,
-.mascot--sad .mascot__squish {
+/* 키 칠 때마다 한 번 말랑 (beat가 바뀌면 is-squish를 다시 붙여 재생) */
+.mascot--happy .mascot__squish.is-squish,
+.mascot--cheer .mascot__squish.is-squish,
+.mascot--sad .mascot__squish.is-squish {
   animation: mascot-squish 0.22s ease-out;
   transform-origin: 50% 100%;
+}
+
+/* 반창고 */
+.mascot__bandage {
+  animation: mascot-bandage 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* 몸(살구색)과 섞이지 않게 핑크 + 진한 테두리 */
+.mascot__bandage rect {
+  fill: #ff8fab;
+  stroke: #d6336c;
+  stroke-width: 1.2;
+}
+.mascot__bandage .mascot__bandage-pad {
+  fill: #ffd6e0;
+  stroke: none;
+}
+.mascot__bandage circle { fill: #d6336c; }
+
+@keyframes mascot-bandage {
+  0% { transform: scale(0) rotate(-40deg); }
+  100% { transform: scale(1) rotate(0); }
 }
 
 /* 말풍선 */
@@ -217,6 +238,33 @@
 @keyframes mascot-pop {
   from { transform: scale(0.6); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* 결과 창 — '수고했어요!' 옆 여백에 만세하는 마스코트 */
+.modal__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.modal__head-text {
+  min-width: 0;
+}
+.mascot--no-bubble {
+  padding-top: 0;
+}
+.modal__head .mascot {
+  flex-shrink: 0;
+  width: 112px;
+  margin: 0 -4px -6px 0;
+}
+.modal__head .modal__unit {
+  white-space: nowrap; /* 마스코트 자리 때문에 '타/분'이 두 줄로 꺾이지 않게 */
+}
+@media (max-width: 480px) {
+  .modal__head .mascot {
+    width: 84px;
+  }
 }
 
 /* 좁은 화면에서는 판 위 오른쪽에 작게 */

@@ -6,7 +6,7 @@ import ResultModal from '../components/ResultModal';
 import KeyPractice from '../components/KeyPractice';
 import KeyboardView from '../components/KeyboardView';
 import ViewHeader from '../components/ViewHeader';
-import Mascot from '../components/Mascot';
+import Mascot, { MAX_WOUNDS } from '../components/Mascot';
 import useTimer from '../hooks/useTimer';
 import { PRACTICE_KINDS, TIMED_MS, getPassage, passageTitles, pickRound } from '../data/practice';
 import { FINGER_NAME, STAGES, fingerOf, keyForStroke, keyLabel } from '../data/keyboard';
@@ -114,6 +114,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     (composingChar !== null &&
       !isPrefix(toKeystrokes(composingChar), toKeystrokes(target.slice(input.length - 1, input.length + 1))));
   const [streak, setStreak] = useState(0); // 오타 없이 연달아 맞힌 글자 수
+  const [wounds, setWounds] = useState(0); // 오타를 남긴 채 넘긴 문장 수 → 마스코트 반창고
   const prevLength = useRef(0);
   useEffect(() => {
     const grew = input.length - prevLength.current;
@@ -123,6 +124,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   }, [input, hasTypo]);
   useEffect(() => {
     setStreak(0);
+    setWounds(0);
     prevLength.current = 0;
   }, [roundId]);
   let mood = 'happy';
@@ -236,6 +238,8 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   const completeSentence = (value) => {
     if (result) return; // 60초가 끝난 뒤 늦게 확정된 글자
     const stats = compareInput(target, value, false);
+    // 틀린 글자를 고치지 않고 넘기면 마스코트에 반창고 하나 (덜 친 채로 넘긴 것도 포함)
+    if (stats.correctChars < target.length) setWounds((n) => Math.min(n + 1, MAX_WOUNDS));
     const nextTotals = {
       correctChars: totals.correctChars + stats.correctChars,
       correctStrokes: totals.correctStrokes + stats.correctStrokes,
@@ -455,7 +459,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
                 upcomingLayout={kind === 'words' ? 'inline' : 'lines'}
                 onClick={focusInput}
               />
-              <Mascot mood={mood} beat={input.length} />
+              <Mascot mood={mood} beat={input.length} wounds={wounds} />
             </div>
 
             <TypingInput
@@ -529,6 +533,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
           result={result}
           title={resultTitle}
           nextLabel={next.label}
+          wounds={wounds}
           onRestart={() => resetRound()}
           onNext={goNext}
         />

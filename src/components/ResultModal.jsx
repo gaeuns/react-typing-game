@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { formatTime } from '../utils/calculate';
+import Mascot from './Mascot';
 
 /**
  * 한 판이 끝나면 뜨는 결과 화면 — 모든 연습 종류가 같이 쓴다.
+ * wounds: 연습 중 마스코트에 붙은 반창고 수 — 결과 창의 마스코트에도 그대로 붙어서 나온다
  * Enter: 다음 연습으로 / Esc: 같은 연습 다시 하기 (둘 다 뜨자마자 들어온 키는 무시)
  *
  * 버튼에 autoFocus를 주지 않는다 — 판을 끝내자마자 습관적으로 친 Space가 버튼을 눌러
@@ -10,7 +12,7 @@ import { formatTime } from '../utils/calculate';
  */
 const KEY_GUARD_MS = 400; // 뜨자마자 들어온 키(마지막 글자 확정용 Enter, 60초 끝날 때 누른 Esc 등)는 무시
 
-export default function ResultModal({ result, title, nextLabel, onRestart, onNext }) {
+export default function ResultModal({ result, title, nextLabel, wounds = 0, onRestart, onNext }) {
   const { speed, accuracy, time, isBest, prevBest, implausible } = result;
   const diff = prevBest ? speed - prevBest.speed : null;
 
@@ -51,23 +53,27 @@ export default function ResultModal({ result, title, nextLabel, onRestart, onNex
       >
         {isBest && <div className="stamp">최고 기록</div>}
 
-        <div>
-          <p className="modal__kind">{title} 완료</p>
-          <h2 id="result-title" className="modal__title">
-            수고했어요!
-          </h2>
-          <div className="modal__hero">
-            <span className="modal__speed">{speed}</span>
-            <span className="modal__unit">타/분</span>
+        <div className="modal__head">
+          <div className="modal__head-text">
+            <p className="modal__kind">{title} 완료</p>
+            <h2 id="result-title" className="modal__title">
+              수고했어요!
+            </h2>
+            <div className="modal__hero">
+              <span className="modal__speed">{speed}</span>
+              <span className="modal__unit">타/분</span>
+            </div>
+            {implausible && (
+              <p className="modal__note">사람이 칠 수 없는 속도라 최고 기록에는 저장하지 않았어요.</p>
+            )}
+            {!implausible && diff !== null && (
+              <p className={`modal__diff ${diff >= 0 ? 'is-up' : 'is-down'}`}>
+                이전 최고 기록보다 {diff >= 0 ? `+${diff}` : diff}타
+              </p>
+            )}
           </div>
-          {implausible && (
-            <p className="modal__note">사람이 칠 수 없는 속도라 최고 기록에는 저장하지 않았어요.</p>
-          )}
-          {!implausible && diff !== null && (
-            <p className={`modal__diff ${diff >= 0 ? 'is-up' : 'is-down'}`}>
-              이전 최고 기록보다 {diff >= 0 ? `+${diff}` : diff}타
-            </p>
-          )}
+          {/* 연습 내내 같이 친 마스코트 — 반창고는 붙은 그대로, 얼굴은 만세 */}
+          <Mascot mood="cheer" wounds={wounds} bubble={false} />
         </div>
 
         <dl className="modal__stats">
