@@ -12,6 +12,7 @@ import { useEffect, useRef } from 'react';
  * beat: 키를 칠 때마다 바뀌는 값 (입력 길이 등) — 바뀌면 몸이 한 번 말랑하게 눌린다
  * wounds: 오타를 남긴 채 넘긴 문장 수 — 그만큼 반창고가 붙는다 (최대 MAX_WOUNDS개)
  * bubble: false면 말풍선 없이 캐릭터만 (결과 창 등)
+ * line: 말풍선에 기분별 기본 말 대신 띄울 말 (게임에서 "5연속 정답!" 등)
  */
 export const MAX_WOUNDS = 5;
 
@@ -30,7 +31,7 @@ const LINES = {
   sad: '앗… 틀렸어요',
 };
 
-export default function Mascot({ mood = 'idle', beat = 0, wounds = 0, bubble = true }) {
+export default function Mascot({ mood = 'idle', beat = 0, wounds = 0, bubble = true, line }) {
   const count = Math.min(wounds, MAX_WOUNDS);
   const squishRef = useRef(null);
 
@@ -43,13 +44,14 @@ export default function Mascot({ mood = 'idle', beat = 0, wounds = 0, bubble = t
     el.classList.add('is-squish');
   }, [beat]);
 
-  const label = `마스코트: ${LINES[mood]}${count ? ` (반창고 ${count}개)` : ''}`;
+  const text = line ?? LINES[mood];
+  const label = `마스코트: ${text}${count ? ` (반창고 ${count}개)` : ''}`;
 
   return (
     <div className={`mascot mascot--${mood} ${bubble ? '' : 'mascot--no-bubble'}`} role="img" aria-label={label}>
       {bubble && (
-        <span className="mascot__bubble" key={mood} aria-hidden="true">
-          {LINES[mood]}
+        <span className="mascot__bubble" key={line ?? mood} aria-hidden="true">
+          {text}
         </span>
       )}
 

@@ -74,3 +74,34 @@ export function saveGameBest(key, record) {
   }
   return true;
 }
+
+// ─── 고스트 레이스 유령 ─────────────────────────────────────────
+// 가장 빨랐던 판을 언어별로 하나 — 유령이 그 판을 그대로 따라 달린다
+// { speed, time, strokes, trace: [TRACE_STEP초마다 누적 바른 타수], date }
+
+const GHOST_KEY = 'tadak:ghost';
+
+function readGhosts() {
+  try {
+    return JSON.parse(localStorage.getItem(GHOST_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+export function getGhost(mode) {
+  return readGhosts()[mode] ?? null;
+}
+
+/** 더 빠른 판이면 유령으로 저장하고 true */
+export function saveGhost(mode, record) {
+  const all = readGhosts();
+  if (all[mode] && all[mode].speed >= record.speed) return false;
+  all[mode] = { ...record, date: new Date().toISOString() };
+  try {
+    localStorage.setItem(GHOST_KEY, JSON.stringify(all));
+  } catch {
+    // 저장 실패는 무시
+  }
+  return true;
+}
