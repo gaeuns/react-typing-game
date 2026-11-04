@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
 import RankNote from './RankNote';
 import GameStat from './GameStat';
-import { Countdown, DangerBar, GameGuide, Popups, addPopup, pruneEffects } from './GameBits';
+import { Countdown, GameGuide, Popups, addPopup, pruneEffects } from './GameBits';
 import useGameInput from './useGameInput';
 import useGameLoop from './useGameLoop';
 import Mascot from '../components/Mascot';
@@ -186,13 +186,6 @@ export default function ChosungGame({ autoStart, onExit }) {
           sub={`맞힘 ${game.solved}`}
         />
       </div>
-
-      <DangerBar
-        label={game.left < 10 ? '⚠️ 시간이 얼마 안 남았어요' : `⏱️ 1분 동안 ${TOTAL_QUESTIONS}문제 · 모르면 Tab으로 넘기기`}
-        ratio={status === 'playing' ? 1 - game.left / GAME_SECONDS : 0}
-        hot={game.left < 10}
-        detail={status === 'playing' ? `${game.left.toFixed(1)}초` : null}
-      />
 
       <div className="game__field quiz-field">
         <div className="quiz-card" key={quiz.word}>
