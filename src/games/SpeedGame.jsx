@@ -101,7 +101,6 @@ export default function SpeedGame({ mode, autoStart, onModeChange, onExit }) {
   };
 
   const begin = () => {
-    showBanner(g.current, 'STAGE 1', '카드 2장으로 시작!');
     setStatus('playing');
     focusInput();
   };

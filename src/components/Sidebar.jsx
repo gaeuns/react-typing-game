@@ -3,7 +3,7 @@ import { GAMES } from '../data/games';
 import { useAuth } from '../hooks/useAuth';
 
 /**
- * 왼쪽 메뉴 — 홈 / 타자 연습 / 타자 게임(목록 · 게임 3종), 맨 아래 내 계정(닉네임 · 로그아웃).
+ * 왼쪽 메뉴 — 홈 / 타자 연습 / 타자 게임(목록 · 게임 5종), 맨 아래 내 계정(닉네임 · 로그아웃).
  * 넓은 화면에선 늘 보이고, 좁은 화면에선 메뉴 버튼으로 여는 서랍(open)이 된다.
  */
 export default function Sidebar({ view, game, onNavigate, open, onClose }) {
