@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { GAMES } from '../data/games';
+import { GAMES, gamesFor, scoreText } from '../data/games';
 import { fetchRanking, medalClass } from '../utils/ranking';
 import { supabase } from '../utils/supabase';
 
@@ -9,7 +9,7 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 const FLASH_MS = 2500;
 
 /**
- * 홈 화면 실시간 랭킹 — 게임 3종의 상위 5명을 나란히.
+ * 홈 화면 실시간 랭킹 — 게임마다 상위 5명을 나란히 (English면 한글 전용 게임은 빼고).
  * 누가 점수를 올리면(Supabase Realtime) 그 게임 순위를 바로 다시 불러오고, 새 기록 줄을 잠깐 반짝인다.
  */
 export default function LiveRanking({ mode }) {
@@ -42,7 +42,7 @@ export default function LiveRanking({ mode }) {
   useEffect(() => {
     if (!configured) return;
     setBoards({});
-    GAMES.forEach((g) => load(g.id));
+    gamesFor(mode).forEach((g) => load(g.id));
   }, [configured, mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 새 점수 알림 구독
@@ -87,12 +87,12 @@ export default function LiveRanking({ mode }) {
 
       <p className="live-ranking__news" aria-live="polite">
         {news
-          ? `🔔 ${news.nickname}님이 ${GAMES.find((g) => g.id === news.game)?.name}에서 ${news.score.toLocaleString()}점!`
+          ? `🔔 ${news.nickname}님이 ${GAMES.find((g) => g.id === news.game)?.name}에서 ${scoreText(news.game, news.score)}!`
           : '새 기록이 나오면 여기에 바로 떠요'}
       </p>
 
       <div className="live-ranking__grid">
-        {GAMES.map((g) => {
+        {gamesFor(mode).map((g) => {
           const rows = boards[g.id];
           return (
             <div key={g.id} className="live-ranking__board">

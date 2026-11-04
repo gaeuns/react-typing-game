@@ -7,7 +7,7 @@ import GameView from './views/GameView';
 // 새로고침해도 보던 화면으로 — 이 탭에서만 기억 (sessionStorage, 막혀 있으면 홈부터)
 const PLACE_KEY = 'tadak:place';
 const VIEWS = ['home', 'practice', 'game'];
-const GAME_IDS = [null, 'speed', 'rain', 'tug'];
+const GAME_IDS = [null, 'speed', 'rain', 'tug', 'chain', 'chosung', 'ghost'];
 
 function loadPlace() {
   try {
@@ -25,7 +25,7 @@ function loadPlace() {
  */
 export default function App() {
   const [view, setView] = useState(() => loadPlace().view); // home | practice | game
-  const [game, setGame] = useState(() => loadPlace().game ?? null); // null(게임 목록) | speed | rain | tug
+  const [game, setGame] = useState(() => loadPlace().game ?? null); // null(게임 목록) | speed | rain | tug | chain | chosung | ghost
   const [mode, setMode] = useState('ko');
   const [isNavOpen, setIsNavOpen] = useState(false);
 

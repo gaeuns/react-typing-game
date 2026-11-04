@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { GAMES } from '../data/games';
+import { gamesFor, scoreText } from '../data/games';
 import { fetchMyRank, fetchRanking, medalClass } from '../utils/ranking';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -11,7 +11,9 @@ const MEDALS = ['🥇', '🥈', '🥉'];
  */
 export default function RankingBoard({ mode }) {
   const { configured, user } = useAuth();
-  const [game, setGame] = useState(GAMES[0].id);
+  const games = gamesFor(mode);
+  const [picked, setGame] = useState(games[0].id);
+  const game = games.some((g) => g.id === picked) ? picked : games[0].id; // English로 바꾸면 한글 전용 게임 탭은 없다
   const [board, setBoard] = useState({ status: 'loading', rows: [], mine: null });
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function RankingBoard({ mode }) {
           🏆 랭킹 <span className="ranking__mode">{mode === 'ko' ? '한글' : 'English'}</span>
         </h3>
         <div className="ranking__tabs" role="tablist" aria-label="랭킹 게임">
-          {GAMES.map((g) => (
+          {games.map((g) => (
             <button
               key={g.id}
               type="button"
@@ -70,14 +72,14 @@ export default function RankingBoard({ mode }) {
             >
               <span className="ranking__rank">{MEDALS[r.rank - 1] ?? r.rank}</span>
               <span className="ranking__name">{r.nickname}</span>
-              <span className="ranking__score">{r.score.toLocaleString()}점</span>
+              <span className="ranking__score">{scoreText(game, r.score)}</span>
             </li>
           ))}
           {user && board.mine && !meInTop && (
             <li className="ranking__row is-me is-outside">
               <span className="ranking__rank">{board.mine.rank}</span>
               <span className="ranking__name">나</span>
-              <span className="ranking__score">{board.mine.score.toLocaleString()}점</span>
+              <span className="ranking__score">{scoreText(game, board.mine.score)}</span>
             </li>
           )}
         </ol>

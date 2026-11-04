@@ -38,3 +38,13 @@ export function toKeystrokes(text) {
 export function isPrefix(a, b) {
   return a.length <= b.length && a.every((key, i) => key === b[i]);
 }
+
+/** 초성만 뽑는다 — "타자연습" → "ㅌㅈㅇㅅ" (한글이 아닌 글자는 그대로) */
+export function toChosung(text) {
+  return [...text]
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      return code >= HANGUL_START && code <= HANGUL_END ? CHO[Math.floor((code - HANGUL_START) / 588)] : char;
+    })
+    .join('');
+}
