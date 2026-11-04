@@ -1,4 +1,4 @@
-// 세 게임이 같이 쓰는 작은 화면 조각들
+// 여러 게임이 같이 쓰는 작은 화면 조각들
 import { useEffect, useRef, useState } from 'react';
 import { playKey } from '../utils/sound';
 

@@ -293,6 +293,9 @@ export function pickFalling(mode, except = []) {
   return { word, icon: FALLING[mode].find(([w]) => w === word)[1] };
 }
 
+// 🔤 초성 퀴즈 — 그림이 있는 낱말은 그림을 힌트로 쓴다
+export const PICTURE_WORDS = { foods: FOODS.ko, things: THINGS.ko };
+
 // 데이터 점검용 (QA · 개발 중 확인)
 export const GAME_WORD_LISTS = {
   speed: SPEED_WORDS,

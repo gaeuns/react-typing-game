@@ -4,23 +4,33 @@ import RankingBoard from '../components/RankingBoard';
 import SpeedGame from '../games/SpeedGame';
 import RainGame from '../games/RainGame';
 import TugGame from '../games/TugGame';
-import { GAMES } from '../data/games';
+import ChosungGame from '../games/ChosungGame';
+import GhostGame from '../games/GhostGame';
+import { GAMES, scoreText } from '../data/games';
 import { getGameBest } from '../utils/storage';
 
-const GAME_COMPONENTS = { speed: SpeedGame, rain: RainGame, tug: TugGame };
+const GAME_COMPONENTS = {
+  speed: SpeedGame,
+  rain: RainGame,
+  tug: TugGame,
+  chosung: ChosungGame,
+  ghost: GhostGame,
+};
 
 /**
  * 타자 게임 화면 — game이 없으면 게임 목록, 있으면 그 게임.
  * 언어를 바꾸면 게임을 새 판으로 다시 띄운다 (key에 mode).
  * "다시 하기" 버튼 · F5: 같은 게임을 처음부터 바로 시작 (브라우저 새로고침 대신)
+ * 한글 전용 게임(info.lang)은 언어를 바꿔도 그대로 — 그 게임의 언어로만 돈다.
  */
 export default function GameView({ mode, onModeChange, game, onSelectGame, onOpenNav }) {
   const Game = GAME_COMPONENTS[game];
   const info = GAMES.find((g) => g.id === game);
-  const [run, setRun] = useState({ id: 0, autoStart: false, game, mode });
+  const gameMode = info?.lang ?? mode;
+  const [run, setRun] = useState({ id: 0, autoStart: false, game, mode: gameMode });
 
   // 다른 게임 · 언어로 바뀌면 그 렌더에서 바로 시작 화면부터 (effect로 하면 한 번 더 그리고, autoStart가 잠깐 남는다)
-  if (run.game !== game || run.mode !== mode) setRun({ id: run.id + 1, autoStart: false, game, mode });
+  if (run.game !== game || run.mode !== gameMode) setRun({ id: run.id + 1, autoStart: false, game, mode: gameMode });
 
   const restart = () => setRun((r) => ({ ...r, id: r.id + 1, autoStart: true }));
 
@@ -60,8 +70,8 @@ export default function GameView({ mode, onModeChange, game, onSelectGame, onOpe
             </button>
           </div>
           <Game
-            key={`${game}-${mode}-${run.id}`}
-            mode={mode}
+            key={`${game}-${gameMode}-${run.id}`}
+            mode={gameMode}
             autoStart={run.autoStart}
             onModeChange={onModeChange}
             onExit={() => onSelectGame(null)}
@@ -73,15 +83,18 @@ export default function GameView({ mode, onModeChange, game, onSelectGame, onOpe
           <p className="lobby__desc">게임을 고르세요 · 낱말 언어 {mode === 'ko' ? '한글' : 'English'}</p>
           <div className="lobby__grid">
             {GAMES.map((g) => {
-              const best = getGameBest(`${g.id}:${mode}`);
+              const best = getGameBest(`${g.id}:${g.lang ?? mode}`);
               return (
                 <button key={g.id} type="button" className="game-card" onClick={() => onSelectGame(g.id)}>
                   <span className="game-card__icon" aria-hidden="true">
                     {g.icon}
                   </span>
-                  <span className="game-card__name">{g.name}</span>
+                  <span className="game-card__name">
+                    {g.name}
+                    {g.lang && g.lang !== mode && <span className="game-card__tag">한글 전용</span>}
+                  </span>
                   <span className="game-card__desc">{g.desc}</span>
-                  <span className="game-card__best">{best ? `최고 ${best.score}점` : '아직 기록 없음'}</span>
+                  <span className="game-card__best">{best ? `최고 ${scoreText(g.id, best.score)}` : '아직 기록 없음'}</span>
                 </button>
               );
             })}

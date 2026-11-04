@@ -3850,3 +3850,308 @@ kbd {
     transition: none !important;
   }
 }
+
+/* ─── 게임 목록 · 안내 창 덧붙임 ─────────────────────────────── */
+.game-card__tag {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.game-overlay__note {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+/* 판 옆에 작게 서 있는 타닥이 — 머리 위는 연속 정답 말풍선 자리 (말풍선이 없어도 비워 둬서 판이 들썩이지 않게) */
+.quiz-side .mascot {
+  width: 88px;
+  padding-top: 44px;
+}
+
+.quiz-side .mascot__bubble {
+  right: auto;
+  left: 50%;
+  translate: -50% 0; /* 등장 애니메이션(transform)과 겹치지 않게 translate로 가운데 */
+}
+
+.quiz-side .mascot__bubble::after {
+  right: calc(50% - 5px);
+}
+
+/* ─── 초성 퀴즈 ──────────────────────────────────────────────── */
+.quiz-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 16px;
+  padding: 20px;
+}
+
+.quiz-card {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  animation: pop-in 0.2s ease-out;
+}
+
+.quiz-card__topic {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.quiz-card__tiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.quiz-tile {
+  display: grid;
+  place-items: center;
+  width: clamp(44px, calc(80cqi / var(--count, 4)), 84px);
+  aspect-ratio: 1;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--accent-ink);
+  font-family: var(--font-type);
+  font-size: clamp(1.4rem, calc(48cqi / var(--count, 4)), 2.6rem);
+  font-weight: 700;
+}
+
+.quiz-tile.is-open {
+  background: var(--accent);
+  color: var(--on-accent);
+  animation: pop-in 0.2s ease-out;
+}
+
+.quiz-card__icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.quiz-card__hint {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.quiz-card__timer {
+  width: 60%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.quiz-card__timer span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ink-faint);
+}
+
+.quiz-card__note {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.quiz-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.quiz-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85rem;
+}
+
+.quiz-history li {
+  padding: 4px 10px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quiz-history li.is-miss {
+  color: var(--ink-soft);
+}
+
+/* ─── 고스트 레이스 ──────────────────────────────────────────── */
+.race-field {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 16px 20px 12px;
+}
+
+.race {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.race-lane {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: end;
+  gap: 10px;
+}
+
+.race-lane__label,
+.race-lane__detail {
+  padding-bottom: 2px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.race-lane__detail {
+  font-family: var(--font-type);
+  text-align: right;
+}
+
+/* 막대 위로 타닥이가 달린다 — 막대 끝(100%)에서도 안 넘치게 달리는 길은 타닥이 너비만큼 짧게 */
+.race-lane__track {
+  --runner: 52px;
+  position: relative;
+  height: 64px;
+  margin-right: var(--runner);
+  background: linear-gradient(var(--line), var(--line)) bottom / 100% 10px no-repeat;
+  border-radius: 999px;
+}
+
+.race-lane__fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/* 내 막대는 키를 칠 때만 바뀌어서 살짝 미끄러지게 — 유령은 매 프레임 움직이므로 transition을 걸면
+   매번 처음부터 다시 시작돼 멈춰 있다가 한 번에 튄다 */
+.race-lane.is-me .race-lane__fill {
+  transition: width 0.1s linear;
+}
+
+.race-lane.is-me .race-lane__runner {
+  transition: left 0.1s linear;
+}
+
+.race-lane.is-ghost .race-lane__fill {
+  background: var(--ink-faint);
+  opacity: 0.6;
+}
+
+.race-lane__runner {
+  position: absolute;
+  bottom: 6px;
+  width: var(--runner);
+}
+
+.race-lane__runner .mascot {
+  width: 100%;
+  padding-top: 0;
+}
+
+/* 유령 — 반투명 타닥이 */
+.race-lane.is-ghost .race-lane__runner {
+  opacity: 0.4;
+  filter: grayscale(0.6);
+  animation: ghost-float 1.2s ease-in-out infinite alternate; /* 둥실둥실 — 늘 떠 있는 유령 */
+}
+
+@keyframes ghost-float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-5px); }
+}
+
+.race-lane__goal {
+  position: absolute;
+  right: calc(var(--runner) * -1 + 4px);
+  bottom: 8px;
+  font-size: 1.3rem;
+}
+
+.race-gap {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.race-gap.is-ahead {
+  color: var(--up);
+}
+
+.race-gap.is-behind {
+  color: var(--wrong);
+}
+
+@media (max-width: 640px) {
+  .quiz-field {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .quiz-side {
+    flex-direction: row;
+  }
+
+  .quiz-side .mascot {
+    width: 64px;
+  }
+
+  .quiz-history {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .quiz-history li {
+    max-width: 45%;
+  }
+
+  .race-lane {
+    grid-template-columns: 34px minmax(0, 1fr) 38px;
+    gap: 6px;
+  }
+
+  .race-lane__track {
+    --runner: 40px;
+    height: 52px;
+  }
+}
