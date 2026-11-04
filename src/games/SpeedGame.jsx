@@ -5,7 +5,6 @@ import GameStat from './GameStat';
 import {
   Banner,
   Countdown,
-  DangerBar,
   GameGuide,
   Hearts,
   LangPicker,
@@ -258,11 +257,6 @@ export default function SpeedGame({ mode, autoStart, onModeChange, onExit }) {
   const fever = game.clock < game.feverUntil;
   const frozen = game.clock < game.freezeUntil;
   const active = activeSlots(game.stage);
-  // 가장 급한 카드 — 이 카드가 0초가 되면 하트가 하나 깎인다
-  const urgent = game.slots
-    .filter((s) => s.card)
-    .reduce((min, s) => (!min || s.card.left / s.card.limit < min.left / min.limit ? s.card : min), null);
-  const lastHeart = game.hearts === 1;
 
   return (
     <div className={`game ${fever ? 'is-fever' : ''} ${frozen ? 'is-frozen' : ''}`}>
@@ -275,18 +269,6 @@ export default function SpeedGame({ mode, autoStart, onModeChange, onExit }) {
           <Hearts count={game.hearts} max={Math.max(START_HEARTS, game.hearts)} />
         </div>
       </div>
-
-      <DangerBar
-        label={lastHeart ? '⚠️ 하트 1개! 한 장만 더 놓치면 끝' : '⏳ 막대가 다 줄기 전에 치세요 · 놓치면 ❤️ -1'}
-        ratio={status === 'playing' && urgent ? 1 - urgent.left / urgent.limit : 0}
-        detail={
-          frozen
-            ? `🧊 시간 멈춤 ${Math.ceil(game.freezeUntil - game.clock)}초`
-            : urgent && status === 'playing'
-              ? `제일 급한 「${urgent.word}」 ${urgent.left.toFixed(1)}초`
-              : null
-        }
-      />
 
       <div className="game__field attack-field">
         <div className="attack-grid">

@@ -81,24 +81,6 @@ export function pruneEffects(game) {
   if (game.banner && now - game.banner.at > BANNER_MS) game.banner = null;
 }
 
-/**
- * 게임 오버까지 얼마나 남았는지 — 무엇 때문에 끝나는지(label)와 막대(ratio: 0 안전 → 1 게임 오버)
- * 70%를 넘으면 빨갛게 깜빡인다 (hot을 주면 그 값을 따른다).
- */
-export function DangerBar({ label, ratio, detail, hot }) {
-  const value = Math.max(0, Math.min(1, ratio));
-  const isHot = hot ?? value > 0.7;
-  return (
-    <div className={`danger ${isHot ? 'is-hot' : ''}`} role="status" aria-label={`${label} ${detail ?? ''}`}>
-      <span className="danger__label">{label}</span>
-      <span className="danger__bar">
-        <span style={{ width: `${value * 100}%` }} />
-      </span>
-      {detail && <span className="danger__detail">{detail}</span>}
-    </div>
-  );
-}
-
 /** 시작 화면 규칙 — 아이콘 + 한 줄 [[icon, text], …] */
 export function Rules({ rules }) {
   return (

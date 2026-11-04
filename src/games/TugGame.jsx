@@ -5,7 +5,6 @@ import GameStat from './GameStat';
 import {
   Banner,
   Countdown,
-  DangerBar,
   GameGuide,
   LangPicker,
   Popups,
@@ -28,18 +27,25 @@ const MAX_ITEMS = 3;
 const ITEM_WORD_CHANCE = 0.18; // 새 낱말이 아이템 낱말(금색)일 확률
 const POWER_SECONDS = 6;
 const FREEZE_SECONDS = 4;
-const YANK_PULL = 15;
-const GUST_PULL = 10;
 const INK_SECONDS = 3;
 const EVENT_SECONDS = 1.6;
 const COMBO_WINDOW = 3; // 이 시간(초) 안에 다음 낱말을 치면 콤보가 이어진다
-const SPECIAL_PULL = 20; // 필살 게이지가 차면 한 번에 더 당기는 양
 
-// 상대는 라운드가 오를수록 세게 당긴다 (초당)
-const cpuRate = (round) => 3 + 1.6 * (round - 1);
-// 낱말 하나로 당기는 양 — 긴 낱말(키를 많이 누르는 낱말)일수록 많이
-const pullFor = (word) => 5 + toKeystrokes(word).length * 1.1;
-// 콤보가 이어질수록 조금씩 세게 (최대 1.5배)
+// 밧줄은 칸으로 움직인다 — 가운데에서 한쪽 끝(승리선 · 패배선)까지 STEPS칸.
+// 한 번에 확 끝나지 않게 낱말 하나 = 1칸(긴 낱말 2칸), 아이템 · 필살도 최대 2칸.
+const STEPS = 8;
+const LONG_WORD_KEYS = 12; // 키를 이만큼 이상 누르는 낱말은 2칸
+const YANK_STEPS = 2;
+const GUST_STEPS = 1;
+const SPECIAL_STEPS = 1; // 필살 게이지가 차면 그 낱말에 더해지는 칸
+const FINISH_MS = 500; // 승리선 · 패배선에 닿은 뒤 결과 창까지 — 깃발이 선에 닿는 것만 보여 주고 바로 (그동안 입력은 막음)
+
+// 상대는 쉬지 않고 조금씩 끌어가다 힘이 1칸만큼 모이면 한 칸 당긴다 (칸/초, 라운드가 오를수록 가파르게)
+// 0.12 · 0.23 · 0.36 · 0.51 · 0.68 … — 시뮬레이션(실제 낱말 목록)으로 맞춤: 분당 120타는 R1, 180타 R2,
+// 250타 R3, 350타 R4, 500타 R5까지 거의 이기고 그다음 라운드에서 반쯤 진다
+const cpuRate = (round) => 0.12 + 0.1 * (round - 1) + 0.01 * (round - 1) ** 2;
+const stepsFor = (word) => (toKeystrokes(word).length >= LONG_WORD_KEYS ? 2 : 1);
+// 콤보가 이어질수록 필살 게이지가 빨리 찬다 (최대 1.5배)
 const comboBonus = (combo) => 1 + Math.min(combo, 10) * 0.05;
 const cpuItemDelay = () => 9 + Math.random() * 6;
 const opponentFor = (round) => OPPONENTS[Math.min(round, OPPONENTS.length) - 1];
@@ -59,7 +65,9 @@ function makeChoice(game, mode) {
 }
 
 const freshRound = (game, mode) => {
-  game.pull = 0; // -100(상대 승) ~ 100(내 승)
+  game.pos = 0; // -STEPS(상대 승) ~ STEPS(내 승), 칸
+  game.cpuCharge = 0; // 상대가 모으는 힘 0~1 — 1이 되면 한 칸 (그 사이 깃발이 조금씩 끌려가 보인다)
+  game.shown = 0; // 화면에 그리는 밧줄 위치(-100~100)
   game.left = ROUND_SECONDS;
   game.clock = 0;
   game.powerUntil = 0;
@@ -72,12 +80,11 @@ const freshRound = (game, mode) => {
   game.choices = Array(CHOICES).fill(null);
   for (let i = 0; i < CHOICES; i += 1) game.choices[i] = makeChoice(game, mode);
   game.ended = false;
-  const foe = opponentFor(game.round);
-  showBanner(game, `ROUND ${game.round}`, `vs ${foe.icon} ${foe.name}`);
+  game.banner = null; // 큰 배너는 카운트다운 숫자 · 낱말을 가려서, 라운드 안내는 시작 뒤 밧줄 위 알림 칸에(begin)
 };
 
 const freshGame = (mode) => {
-  const game = { round: 1, score: 0, inventory: [], gauge: 0, popups: [], banner: null, nextId: 1, choices: [] };
+  const game = { round: 1, score: 0, inventory: [], gauge: 0, popups: [], banner: null, nextId: 1, choices: [], hits: 0 };
   freshRound(game, mode);
   return game;
 };
@@ -104,14 +111,20 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
     g.current.event = { icon, text, until: g.current.clock + EVENT_SECONDS };
   };
 
+  const finishTimer = useRef(null);
+  useEffect(() => () => clearTimeout(finishTimer.current), []);
+
   // 시작 · 다시 하기 → 3 · 2 · 1 → begin
   const start = () => {
+    clearTimeout(finishTimer.current); // 결과 창을 기다리는 중에 F5 · 다시 하기를 눌러도 옛 판 결과가 뜨지 않게
     g.current = freshGame(mode);
     setResult(null);
     setStatus('countdown');
   };
 
   const begin = () => {
+    const foe = opponentFor(g.current.round);
+    announce('🪢', `ROUND ${g.current.round} · vs ${foe.icon} ${foe.name}`);
     setStatus('playing');
     focusInput();
   };
@@ -126,11 +139,11 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
     focusInput();
   };
 
+  // 다음 라운드도 3 · 2 · 1 — 배너를 보는 사이 상대가 먼저 당겨 깃발이 가운데를 벗어나지 않게
   const nextRound = () => {
     g.current.round += 1;
     freshRound(g.current, mode);
-    setStatus('playing');
-    focusInput();
+    setStatus('countdown');
   };
 
   // reason: 'pulled'(깃발을 승리선까지) | 'pulledAway'(패배선까지 끌려감) | 'timeout'(시간 종료 → 깃발 위치로 판정)
@@ -143,8 +156,20 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
     const prev = getGameBest(bestKey);
     const isBest = saveGameBest(bestKey, { score: game.score, level: game.round });
     if (isBest) setBest(getGameBest(bestKey));
-    setResult({ score: game.score, round: game.round, isBest, prev, reason });
-    setStatus(won ? 'won' : 'over');
+    setResult({ score: game.score, round: game.round, isBest, prev, reason, won });
+    setTyped(''); // 치던 글자는 버린다 — 끝난 뒤엔 더 칠 수 없다
+    // 바로 결과 창을 띄우지 않고 깃발이 선에 닿은 모습을 잠깐 보여 준다 (그동안 게임은 멈춤)
+    setStatus('finishing');
+    finishTimer.current = setTimeout(() => setStatus(won ? 'won' : 'over'), FINISH_MS);
+  };
+
+  // 칸 이동 — 끝(±STEPS)에 닿으면 라운드 끝
+  const move = (steps) => {
+    const game = g.current;
+    if (game.ended) return;
+    game.pos = Math.max(-STEPS, Math.min(STEPS, game.pos + steps));
+    if (game.pos >= STEPS) endRound(true, 'pulled');
+    else if (game.pos <= -STEPS) endRound(false, 'pulledAway');
   };
 
   const activateItem = (slot) => {
@@ -154,38 +179,49 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
     game.inventory.splice(slot, 1);
     if (item.id === 'power') game.powerUntil = game.clock + POWER_SECONDS;
     if (item.id === 'freeze') game.freezeUntil = game.clock + FREEZE_SECONDS;
-    if (item.id === 'yank') game.pull = Math.min(100, game.pull + YANK_PULL);
     announce(item.icon, `${item.name}!`);
-    if (game.pull >= 100) endRound(true);
+    if (item.id === 'yank') {
+      game.hits += 1;
+      move(YANK_STEPS);
+    }
     rerender();
   };
 
   useGameLoop((dt) => {
     const game = g.current;
-    game.clock += dt;
-    game.left -= dt;
-    if (game.clock >= game.freezeUntil) game.pull -= cpuRate(game.round) * dt;
-    if (game.clock - game.lastHit > COMBO_WINDOW) game.combo = 0;
+    if (!game.ended) {
+      game.clock += dt;
+      game.left -= dt;
+      if (game.clock >= game.freezeUntil) game.cpuCharge += cpuRate(game.round) * dt;
+      if (game.clock - game.lastHit > COMBO_WINDOW) game.combo = 0;
 
-    // 상대의 방해 아이템
-    game.cpuItemIn -= dt;
-    if (game.cpuItemIn <= 0) {
-      const item = pick(CPU_ITEMS);
-      if (item.id === 'gust') game.pull -= GUST_PULL;
-      if (item.id === 'ink') game.inkUntil = game.clock + INK_SECONDS;
-      announce(item.icon, `상대의 ${item.name}! ${item.desc}`);
-      game.cpuItemIn = cpuItemDelay();
+      if (game.cpuCharge >= 1) {
+        game.cpuCharge -= 1;
+        move(-1);
+      }
+
+      // 상대의 방해 아이템
+      game.cpuItemIn -= dt;
+      if (!game.ended && game.cpuItemIn <= 0) {
+        const item = pick(CPU_ITEMS);
+        if (item.id === 'ink') game.inkUntil = game.clock + INK_SECONDS;
+        announce(item.icon, `상대의 ${item.name}! ${item.desc}`);
+        game.cpuItemIn = cpuItemDelay();
+        if (item.id === 'gust') move(-GUST_STEPS);
+      }
+
+      if (!game.ended && game.left <= 0) endRound(game.pos > 0, 'timeout');
     }
 
-    if (game.pull >= 100) endRound(true, 'pulled');
-    else if (game.pull <= -100) endRound(false, 'pulledAway');
-    else if (game.left <= 0) endRound(game.pull > 0, 'timeout');
-    game.pull = Math.max(-100, Math.min(100, game.pull));
+    // 화면 위치는 목표로 부드럽게 따라간다 — 한 칸 당기면 약 0.3초에 걸쳐 스르륵.
+    // (CSS transition은 매 프레임 값이 바뀌면 계속 처음부터 다시 시작돼 거의 안 움직여서 JS로)
+    const target = ((game.pos - (game.ended ? 0 : game.cpuCharge)) / STEPS) * 100;
+    game.shown += (target - game.shown) * Math.min(1, dt * 10);
     pruneEffects(game);
     rerender();
-  }, status === 'playing');
+  }, status === 'playing' || status === 'finishing'); // 끝난 뒤에도 깃발이 선까지 가는 모습은 마저 그린다
 
-  const { inputProps } = useGameInput({
+  const { inputProps, setValue: setTyped } = useGameInput({
     mode,
     onSubmit: (text) => {
       if (status !== 'playing') return;
@@ -198,21 +234,21 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
         return;
       }
       const choice = game.choices[index];
+      game.hits += 1; // 당길 때마다 '나'가 홱 당기는 몸짓을 다시 틀기 위한 번호
       game.combo = game.clock - game.lastHit <= COMBO_WINDOW ? game.combo + 1 : 1;
       game.lastHit = game.clock;
       const power = game.clock < game.powerUntil ? 2 : 1;
-      let pull = pullFor(text) * power * comboBonus(game.combo);
+      let steps = Math.min(2, stepsFor(text) * power); // 한 낱말로는 최대 2칸
       game.score += Math.round(text.length * 10 * power * comboBonus(game.combo));
 
-      // 필살 게이지 — 당긴 만큼 찬다
-      game.gauge += pull * 1.2;
+      // 필살 게이지 — 낱말마다 차고, 콤보가 이어지면 더 빨리
+      game.gauge += 15 * comboBonus(game.combo);
       if (game.gauge >= 100) {
         game.gauge = 0;
-        pull += SPECIAL_PULL;
-        showBanner(game, '💥 필살 당기기!', `+${SPECIAL_PULL}`);
+        steps = Math.min(2, steps + SPECIAL_STEPS); // 필살이어도 낱말 하나로는 2칸까지 — 확 끝나지 않게
+        showBanner(game, '💥 필살 당기기!', `${steps}칸`);
       }
-      game.pull = Math.min(100, game.pull + pull);
-      addPopup(game, `+${Math.round(pull)}`, 20 + index * 30, 62, power > 1 ? 'fever' : null);
+      addPopup(game, `+${steps}칸`, 20 + index * 30, 62, power > 1 ? 'fever' : null);
 
       if (choice.item && game.inventory.length < MAX_ITEMS) {
         game.inventory.push(choice.item);
@@ -224,10 +260,12 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
       game.choices[index] = makeChoice(game, mode);
       // 칸이 가득 찼으면 남아 있는 금색 낱말도 보통 낱말로 (쳐도 얻을 게 없으니)
       if (game.inventory.length >= MAX_ITEMS) game.choices.forEach((c) => (c.item = null));
-      if (game.pull >= 100) endRound(true);
+      move(steps);
       rerender();
     },
     onKey: (e) => {
+      // 라운드가 끝나면(결과 창이 뜨기 전 잠깐 포함) 글자 · Enter · 아이템 키를 모두 막는다. F5는 다시 하기
+      if (g.current.ended && e.key !== 'F5') return true;
       if (e.key === 'Escape' && status === 'playing') {
         setStatus('paused');
         return true;
@@ -242,7 +280,11 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
   });
 
   const game = g.current;
-  const { round, score, pull, left, clock, choices, inventory, event, combo, gauge } = game;
+  const { round, score, pos, left, clock, choices, inventory, event, combo, gauge } = game;
+  // 화면 위치(-100~100): 칸 위치(상대가 모으는 힘만큼 조금씩 끌려감)를 게임 루프에서 부드럽게 따라간 값
+  const pull = game.shown;
+  const finishing = status === 'finishing';
+  const danger = pos <= -(STEPS - 2); // 패배선까지 2칸 이하
   const powered = clock < game.powerUntil;
   const frozen = clock < game.freezeUntil;
   const inked = clock < game.inkUntil;
@@ -257,27 +299,9 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
         <GameStat label="연속" value={combo} />
       </div>
 
-      <DangerBar
-        label={
-          pull < -60
-            ? '⚠️ 빨간 선 코앞! 빨리 당기세요'
-            : '⏱️ 시간이 끝나면 깃발 위치로 승패'
-        }
-        ratio={status === 'playing' ? 1 - left / ROUND_SECONDS : 0}
-        // 패배선이 가깝거나, 시간이 얼마 안 남았는데 지고 있을 때만 빨갛게
-        hot={status === 'playing' && (pull < -60 || (left < ROUND_SECONDS * 0.3 && pull <= 0))}
-        detail={
-          status === 'playing'
-            ? `${Math.max(0, Math.ceil(left))}초 남음 · ${
-                pull > 0 ? '🟢 이기는 중' : pull > -1 ? '⚪ 가운데 · 지는 중' : '🔴 지는 중'
-              }`
-            : null
-        }
-      />
-
       <div className="game__field tug-field">
         <div className="tug-field__effects" aria-live="polite">
-          {combo >= 2 && <span className="effect-chip">🔥 {combo}연속 · 더 세게</span>}
+          {combo >= 2 && <span className="effect-chip">🔥 {combo}연속 · 게이지 더 빨리</span>}
           {powered && <span className="effect-chip">💪 힘 2배 {Math.ceil(game.powerUntil - clock)}초</span>}
           {frozen && <span className="effect-chip">🧊 상대 멈춤 {Math.ceil(game.freezeUntil - clock)}초</span>}
           {inked && <span className="effect-chip is-bad">🦑 먹물 {Math.ceil(game.inkUntil - clock)}초</span>}
@@ -288,14 +312,32 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
           )}
         </div>
 
-        <div className="rope" aria-label={`밧줄 위치 ${Math.round(pull)} (100이면 승리)`}>
+        <div
+          // 끝난 자세(이긴 쪽 · 진 쪽)는 결과 창이 떠 있는 동안에도 그대로
+          className={`rope ${status === 'playing' ? 'is-live' : ''} ${
+            ['finishing', 'won', 'over'].includes(status) ? (result?.won ? 'is-won' : 'is-lost') : ''
+          }`}
+          aria-label={`밧줄 위치 ${pos}칸 (${STEPS}칸이면 승리, -${STEPS}칸이면 패배)`}
+          style={{ '--pull': pull }}
+        >
           <span className="rope__side">
-            <span className={`rope__who ${powered ? 'is-strong' : ''}`} aria-hidden="true">
+            {/* key가 바뀌면 다시 마운트돼 '홱' 몸짓이 처음부터 다시 나온다 */}
+            <span
+              key={game.hits}
+              className={`rope__who rope__who--me ${powered ? 'is-strong' : ''} ${game.hits ? 'is-yank' : ''}`}
+              aria-hidden="true"
+            >
               🧑
             </span>
             나
           </span>
           <div className="rope__track">
+            {/* 가운데에서 깃발까지 — 내 쪽이면 초록, 상대 쪽이면 빨강 */}
+            <span
+              className={`rope__gain ${pull >= 0 ? 'is-mine' : 'is-theirs'}`}
+              style={{ left: `${50 - Math.max(pull, 0) / 2}%`, width: `${Math.abs(pull) / 2}%` }}
+            />
+            <span className="rope__line" />
             <span className="rope__goal rope__goal--me">
               <span className="rope__goal-label">승리선</span>
             </span>
@@ -304,21 +346,21 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
             </span>
             <span className="rope__center" />
             <span className="rope__knot" style={{ left: `${50 - pull / 2}%` }} aria-hidden="true">
-              🚩
+              <span key={game.hits} className={game.hits ? 'is-bump' : ''}>🚩</span>
             </span>
           </div>
           <span className="rope__side">
-            <span className={`rope__who ${frozen ? 'is-frozen' : ''}`} aria-hidden="true">
+            <span className={`rope__who rope__who--cpu ${frozen ? 'is-frozen' : ''}`} aria-hidden="true">
               {foe.icon}
             </span>
             {foe.name}
           </span>
         </div>
 
-        <p className={`rope__rule ${pull < -60 ? 'is-danger' : ''}`}>
-          {pull < -60
+        <p className={`rope__rule ${danger ? 'is-danger' : ''}`}>
+          {danger
             ? '⚠️ 깃발이 빨간 선에 가까워요!'
-            : '🚩 초록 선까지 당기면 승리 · 빨간 선에 닿으면 패배'}
+            : `🚩 ${STEPS}칸 당겨 초록 선에 닿으면 승리 · 빨간 선에 닿으면 패배`}
         </p>
 
         <div className={`tug-choices ${inked ? 'is-inked' : ''}`}>
@@ -330,7 +372,7 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
             >
               {c.item && <span className="tug-choice__item">{c.item.icon} {c.item.name}</span>}
               <span className="tug-choice__word" style={{ '--units': widthUnits(c.text) }}>
-                {status === 'ready' || status === 'countdown' ? '?' : c.text}
+                {status === 'ready' || status === 'countdown' || status === 'finishing' ? '?' : c.text}
               </span>
             </div>
           ))}
@@ -378,6 +420,7 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
           aria-label="낱말 입력"
           onBlur={() => status === 'playing' && setStatus('paused')}
           {...inputProps}
+          readOnly={inputProps.readOnly || status !== 'playing'} // 터치 기기 입력기도 끝난 뒤엔 막기
         />
       </div>
 
@@ -393,8 +436,8 @@ export default function TugGame({ mode, autoStart, onModeChange, onExit }) {
               '라운드를 이길수록 더 센 상대가 나와요. 이긴 라운드에서 그만둬도 점수는 랭킹에 남아요.',
             ]}
             rules={[
-              ['🎯', `낱말 ${CHOICES}개 중 아무거나 치면 당겨요 · 긴 낱말일수록 세게`],
-              ['🟢', '깃발이 초록 승리선에 닿으면 바로 승리'],
+              ['🎯', `낱말 ${CHOICES}개 중 아무거나 치면 한 칸 · 아주 긴 낱말은 두 칸`],
+              ['🟢', `깃발을 ${STEPS}칸 당겨 초록 승리선에 닿으면 승리`],
               ['🔴', '빨간 패배선에 닿으면 패배'],
               ['⏱️', `${ROUND_SECONDS}초가 끝나면 깃발이 내 쪽에 있을 때 승리`],
               ['💥', '쉬지 않고 치면 콤보 · 게이지가 차면 필살 당기기'],
