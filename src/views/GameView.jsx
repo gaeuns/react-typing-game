@@ -4,7 +4,6 @@ import RankingBoard from '../components/RankingBoard';
 import SpeedGame from '../games/SpeedGame';
 import RainGame from '../games/RainGame';
 import TugGame from '../games/TugGame';
-import ChainGame from '../games/ChainGame';
 import ChosungGame from '../games/ChosungGame';
 import GhostGame from '../games/GhostGame';
 import { GAMES, scoreText } from '../data/games';
@@ -14,7 +13,6 @@ const GAME_COMPONENTS = {
   speed: SpeedGame,
   rain: RainGame,
   tug: TugGame,
-  chain: ChainGame,
   chosung: ChosungGame,
   ghost: GhostGame,
 };

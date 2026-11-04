@@ -3763,8 +3763,7 @@ kbd {
 }
 
 /* 판 옆에 작게 서 있는 타닥이 (말풍선 없이) */
-.quiz-side .mascot,
-.chain-turn .mascot {
+.quiz-side .mascot {
   width: 88px;
   padding-top: 0;
 }
@@ -3892,137 +3891,6 @@ kbd {
   color: var(--ink-soft);
 }
 
-/* ─── 끝말잇기 타자 ──────────────────────────────────────────── */
-.chain-field {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
-}
-
-.chain-trail {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.chain-trail__word {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--chip);
-  font-family: var(--font-type);
-  font-size: 0.85rem;
-}
-
-.chain-trail__word + .chain-trail__word::before {
-  content: '→ ';
-  color: var(--ink-faint);
-}
-
-.chain-trail__word.is-me {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-  font-weight: 700;
-}
-
-.chain-trail__word.is-break {
-  background: none;
-}
-
-.chain-turn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-
-.chain-turn__speech {
-  container-type: inline-size;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  flex: 0 1 420px;
-  min-width: 0;
-  padding: 18px 24px;
-  border: 2px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--bg);
-}
-
-/* 말풍선 꼬리 — 타닥이 쪽 */
-.chain-turn__speech::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -10px;
-  width: 16px;
-  height: 16px;
-  border-bottom: 2px solid var(--line);
-  border-left: 2px solid var(--line);
-  background: var(--bg);
-  transform: translateY(-50%) rotate(45deg);
-}
-
-.chain-turn__word {
-  max-width: 100%;
-  font-family: var(--font-type);
-  font-size: clamp(1.4rem, calc(90cqi / var(--units, 4)), 2.8rem);
-  font-weight: 700;
-  line-height: 1.2;
-  text-align: center;
-  overflow-wrap: anywhere;
-  animation: pop-in 0.2s ease-out;
-}
-
-.chain-turn__word mark {
-  padding: 0 4px;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.chain-turn__ask {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--ink-soft);
-  text-align: center;
-}
-
-.chain-turn__thinking {
-  font-size: 1.1rem;
-  color: var(--ink-soft);
-  animation: thinking 0.7s ease-in-out infinite alternate;
-}
-
-@keyframes thinking {
-  to { opacity: 0.4; }
-}
-
-.chain-field__message {
-  margin: 0;
-  min-height: 1.5em;
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-align: center;
-  color: var(--ink-soft);
-}
-
-.chain-field__message.is-bad {
-  color: var(--wrong);
-}
-
-.chain-field__message.is-good {
-  color: var(--up);
-}
-
 /* ─── 고스트 레이스 ──────────────────────────────────────────── */
 .race-field {
   display: flex;
@@ -4133,8 +4001,7 @@ kbd {
     flex-direction: row;
   }
 
-  .quiz-side .mascot,
-  .chain-turn .mascot {
+  .quiz-side .mascot {
     width: 64px;
   }
 

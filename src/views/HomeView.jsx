@@ -6,7 +6,7 @@ import LiveRanking from '../components/LiveRanking';
 
 const FEATURES = [
   ['⌨️', '자리 · 낱말 · 단문 · 장문 · 60초'],
-  ['🎮', '타자 게임 6종'],
+  ['🎮', '타자 게임 5종'],
   ['🏆', '실시간 랭킹'],
 ];
 

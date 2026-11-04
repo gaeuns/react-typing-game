@@ -15,7 +15,8 @@ import { playKey } from '../utils/sound';
 
 const COURSE_SENTENCES = 3; // 한 판에 달리는 문장 수
 const TRACE_STEP = 0.25; // 유령 기록 간격(초)
-const DEFAULT_GHOST_SPEED = 150; // 기록이 하나도 없을 때 유령 타수
+const DEFAULT_GHOST_SPEED = 150; // 기록이 하나도 없을 때 유령 타수 (GHOST_PACE를 곱하기 전)
+const GHOST_PACE = 1.1; // 유령은 기록보다 10% 빠르게 달린다 — 내 최고 기록과 똑같으면 이기기 너무 쉬워서
 const MAX_PLAUSIBLE_SPEED = 2000; // 이보다 빠르면 유령으로 저장하지 않는다 (낱말이 통째로 들어온 판)
 
 const sentenceStrokes = (text) => [...text].reduce((sum, c) => sum + countStrokes(c), 0);
@@ -41,24 +42,29 @@ function progressOf(target, input, composing) {
 
 /**
  * 이번 판 유령 — 고스트 레이스에서 낸 내 최고 기록(움직임 그대로)과 단문 연습 최고 타수 중 빠른 쪽.
- * 둘 다 없으면 기본 유령.
+ * 둘 다 없으면 기본 유령. 어느 쪽이든 GHOST_PACE만큼 빠르게 (speed는 빨라진 타수)
  */
 function chooseGhost(mode) {
   const own = getGhost(mode);
   const practice = getBest(mode);
-  if (own && (!practice || own.speed >= practice.speed)) return { ...own, source: '고스트 레이스 내 최고 기록' };
-  if (practice) return { speed: practice.speed, trace: null, source: '단문 연습 내 최고 기록' };
-  return { speed: DEFAULT_GHOST_SPEED, trace: null, source: '아직 기록이 없어 기본 유령' };
+  const paced = (speed) => Math.round(speed * GHOST_PACE);
+  if (own && (!practice || own.speed >= practice.speed)) {
+    return { trace: own.trace, speed: paced(own.speed), source: '고스트 레이스 내 최고 기록' };
+  }
+  if (practice) return { speed: paced(practice.speed), trace: null, source: '단문 연습 내 최고 기록' };
+  return { speed: paced(DEFAULT_GHOST_SPEED), trace: null, source: '아직 기록이 없어 기본 유령' };
 }
 
-/** t초에 유령이 친 타수 — 기록(trace)이 있으면 그대로 따라가고, 기록이 끝나면 평균 속도로 이어 간다 */
+/**
+ * t초에 유령이 친 타수 — 기록(trace)이 있으면 GHOST_PACE배 빨리 감아 따라가고, 기록이 끝나면 평균 속도로 이어 간다
+ */
 function ghostStrokesAt(ghost, t) {
   const rate = ghost.speed / 60;
   const { trace } = ghost;
   if (!trace?.length) return rate * t;
-  const i = t / TRACE_STEP;
+  const i = (t * GHOST_PACE) / TRACE_STEP;
   const last = trace.length - 1;
-  if (i >= last) return trace[last] + rate * (t - last * TRACE_STEP);
+  if (i >= last) return trace[last] + rate * (t - (last * TRACE_STEP) / GHOST_PACE);
   const k = Math.floor(i);
   return trace[k] + (trace[k + 1] - trace[k]) * (i - k);
 }
@@ -383,7 +389,8 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
                 list: [
                   ['👻', '레이스 기록', '고스트 레이스 최고 기록 — 그때 멈칫한 곳까지 그대로 따라 해요'],
                   ['📝', '단문 연습', '레이스 기록이 없으면 단문 연습 최고 타수로 고르게 달려요'],
-                  ['🐢', '기본 유령', `기록이 하나도 없으면 ${DEFAULT_GHOST_SPEED}타로 달려요`],
+                  ['🐢', '기본 유령', `기록이 하나도 없으면 ${Math.round(DEFAULT_GHOST_SPEED * GHOST_PACE)}타로 달려요`],
+                  ['⚡', '살짝 더 빠르게', `유령은 기록보다 ${Math.round((GHOST_PACE - 1) * 100)}% 빨리 달려요`],
                 ],
               },
             ]}
