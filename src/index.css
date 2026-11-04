@@ -17,6 +17,7 @@
   --wrong: #c92a2a;
   --wrong-bg: #ffe3e3;
   --up: #2b6a35;
+  --up-bg: #e3f2e5;
   /* 랭킹 1 · 2 · 3위 */
   --gold-bg: #fef3c7;
   --gold: #d97706;
@@ -55,6 +56,7 @@
     --wrong: #ff6b6b;
     --wrong-bg: #4a1f1f;
     --up: #69db7c;
+    --up-bg: rgb(105 219 124 / 0.14);
     --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.3);
     --gold-bg: rgb(245 158 11 / 0.16);
     --gold: #fbbf24;
@@ -1318,19 +1320,16 @@ kbd {
 .ranking__row.is-gold,
 .live-ranking__row.is-gold {
   background: var(--gold-bg);
-  box-shadow: inset 4px 0 0 var(--gold);
 }
 
 .ranking__row.is-silver,
 .live-ranking__row.is-silver {
   background: var(--silver-bg);
-  box-shadow: inset 4px 0 0 var(--silver);
 }
 
 .ranking__row.is-bronze,
 .live-ranking__row.is-bronze {
   background: var(--bronze-bg);
-  box-shadow: inset 4px 0 0 var(--bronze);
 }
 
 .ranking__row.is-gold .ranking__score,
@@ -2241,11 +2240,12 @@ kbd {
 }
 
 .game-overlay__card.is-over {
-  border-top: 4px solid var(--wrong);
+  /* 위쪽만 은은하게 물든 머리 — 둥근 모서리와 부딪히는 굵은 띠 대신 */
+  background: linear-gradient(180deg, var(--wrong-bg), var(--surface) 96px);
 }
 
 .game-overlay__card.is-win {
-  border-top: 4px solid var(--up);
+  background: linear-gradient(180deg, var(--up-bg), var(--surface) 96px);
 }
 
 .game-overlay__title {
@@ -2564,66 +2564,6 @@ kbd {
 .game.is-fever .game__field {
   border-color: #f59e0b;
   box-shadow: 0 0 0 4px rgb(245 158 11 / 0.25), inset 0 0 60px rgb(245 158 11 / 0.15);
-}
-
-/* 게임 오버까지 남은 정도 — 무엇이 게임을 끝내는지 글로, 얼마나 가까운지 막대로 */
-.danger {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  padding: 8px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-}
-
-.danger__label {
-  flex: 1 1 260px;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.danger__bar {
-  flex: 2 1 200px;
-  height: 10px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--line);
-}
-
-.danger__bar span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent);
-  transition: width 0.1s linear;
-}
-
-.danger.is-hot .danger__bar span {
-  background: var(--wrong);
-}
-
-.danger__detail {
-  flex: none;
-  font-family: var(--font-type);
-  font-size: 0.8rem;
-  color: var(--ink-soft);
-}
-
-.danger.is-hot {
-  border-color: var(--wrong);
-  background: var(--wrong-bg);
-  animation: danger-pulse 0.6s ease-in-out infinite alternate;
-}
-
-.danger.is-hot .danger__label,
-.danger.is-hot .danger__detail {
-  color: var(--wrong);
-}
-
-@keyframes danger-pulse {
-  to { box-shadow: 0 0 0 4px rgb(220 38 38 / 0.15); }
 }
 
 /* 얼음 — 판이 푸르게 */
@@ -2957,6 +2897,11 @@ kbd {
   padding: 16px 20px;
 }
 
+/* 키 작은 화면에서 줄이 눌려 칩 · 밧줄 · 낱말이 서로 겹치지 않게 — 모자라면 화면이 스크롤된다 */
+.tug-field > * {
+  flex-shrink: 0;
+}
+
 .tug-field__effects {
   display: flex;
   flex-wrap: wrap;
@@ -3086,23 +3031,156 @@ kbd {
 .rope__who {
   font-size: 2.2rem;
   line-height: 1.2;
-  transition: transform 0.2s, filter 0.2s;
+  transition: transform 0.2s, filter 0.2s, scale 0.2s; /* 위치(translate)는 게임 루프가 매 프레임 부드럽게 */
 }
 
+/* transform(젖히기 · 홱 애니메이션)과 따로 움직이도록 scale 속성으로 */
 .rope__who.is-strong {
-  transform: scale(1.25);
+  scale: 1.25;
 }
 
 .rope__who.is-frozen {
-  filter: grayscale(1) brightness(1.3);
+  filter: grayscale(1) brightness(1.3) drop-shadow(0 5px 3px rgb(0 0 0 / 0.22));
 }
 
 .rope__track {
   position: relative;
   flex: 1;
-  height: 12px;
+  height: 14px;
+}
+
+/* 꼬인 삼베 밧줄 — 비스듬한 가닥 + 위는 밝고 아래는 어두운 원통 그늘 */
+.rope__line {
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.5) 0 15%, rgb(255 255 255 / 0) 42%, rgb(0 0 0 / 0.38) 100%),
+    repeating-linear-gradient(-60deg, transparent 0 2px, rgb(255 255 255 / 0.14) 2px 3px), /* 잔 섬유 */
+    repeating-linear-gradient(-60deg, #dcb983 0 5px, #b98a4b 5px 7px, #8f6330 7px 8px, #dcb983 8px 10px);
+  /* 안쪽: 위 반사광 · 아래 그늘로 둥글게, 바깥: 바로 밑 짙은 그림자 */
+  box-shadow:
+    inset 0 2px 1px rgb(255 255 255 / 0.35),
+    inset 0 -3px 3px rgb(60 35 10 / 0.35),
+    0 3px 3px rgb(40 25 10 / 0.35);
+  /* 가닥이 깃발과 함께 끌려가 보이게 — 내 쪽(왼쪽)으로 당기면 왼쪽으로 */
+  background-position: 0 0, calc(var(--pull, 0) * -3px) 0, calc(var(--pull, 0) * -3px) 0;
+}
+
+/* 땅에 드리운 그림자 — 밧줄에서 조금 떨어져 흐릿하게 */
+.rope__line::after {
+  content: '';
+  position: absolute;
+  left: 1%;
+  right: 1%;
+  top: calc(100% + 4px);
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.16);
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+/* 사람 · 상대도 땅 그림자 */
+.rope__who {
+  filter: drop-shadow(0 5px 3px rgb(0 0 0 / 0.22));
+}
+
+/* 가운데 → 깃발 구간: 밧줄 둘레에 번지는 색으로 얼마나 끌려왔는지 */
+.rope__gain {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
   border-radius: 999px;
-  background: repeating-linear-gradient(90deg, #a16207 0 10px, #ca8a04 10px 20px);
+  opacity: 0.45;
+}
+
+.rope__gain.is-mine {
+  background: var(--up);
+}
+
+.rope__gain.is-theirs {
+  background: var(--wrong);
+}
+
+/* 지는 쪽 캐릭터(이름 글자는 그대로)가 밧줄 안쪽으로 끌려 들어간다 — translate 속성이라 젖히기 transform과 겹쳐도 됨 */
+.rope__who--me {
+  translate: calc(clamp(0, var(--pull, 0) * -1, 100) * 0.1px) 0;
+}
+
+.rope__who--cpu {
+  translate: calc(clamp(0, var(--pull, 0), 100) * -0.1px) 0;
+}
+
+/* 겨루는 중엔 둘 다 몸을 뒤로 젖혀 버틴다 */
+.rope.is-live .rope__who--me {
+  transform: rotate(-10deg);
+}
+
+.rope.is-live .rope__who--cpu {
+  transform: rotate(10deg);
+  animation: tug-strain 0.6s ease-in-out infinite alternate;
+}
+
+/* 낱말을 칠 때마다 '나'가 홱 */
+.rope.is-live .rope__who--me.is-yank {
+  animation: tug-yank 0.3s ease-out;
+}
+
+/* 멈춘 상대는 버티는 몸짓도 멈춤 */
+.rope.is-live .rope__who--cpu.is-frozen {
+  animation: none;
+}
+
+/* 선에 닿은 뒤 결과 창까지: 이긴 쪽은 폴짝, 진 쪽은 앞으로 고꾸라짐 */
+.rope.is-won .rope__who--me,
+.rope.is-lost .rope__who--cpu {
+  animation: tug-cheer 0.4s ease-out 3;
+}
+
+.rope.is-won .rope__who--cpu {
+  transform: rotate(-25deg);
+}
+
+.rope.is-lost .rope__who--me {
+  transform: rotate(25deg);
+}
+
+@keyframes tug-cheer {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(-10px); }
+}
+
+.rope__knot .is-bump {
+  display: inline-block;
+  animation: tug-bump 0.3s ease-out;
+}
+
+@keyframes tug-yank {
+  0% { transform: rotate(-10deg); }
+  35% { transform: translateX(-8px) rotate(-24deg); }
+  100% { transform: rotate(-10deg); }
+}
+
+@keyframes tug-strain {
+  from { transform: rotate(8deg); }
+  to { transform: translateX(3px) rotate(14deg); }
+}
+
+@keyframes tug-bump {
+  0% { transform: scale(1); }
+  40% { transform: translateX(-6px) scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rope.is-live .rope__who--cpu,
+  .rope.is-live .rope__who--me.is-yank,
+  .rope__knot .is-bump,
+  .rope.is-won .rope__who--me,
+  .rope.is-lost .rope__who--cpu {
+    animation: none;
+  }
 }
 
 .rope__goal {
@@ -3137,7 +3215,6 @@ kbd {
   top: 50%;
   font-size: 1.6rem;
   transform: translate(-50%, -70%);
-  transition: left 0.12s linear;
 }
 
 .items {
@@ -3430,7 +3507,8 @@ kbd {
   }
 
   .tug-field__effects {
-    min-height: 0;
+    min-height: 24px; /* 칩이 생겨도 밧줄이 밀리지 않게 자리를 잡아 둠 */
+    margin-bottom: 12px; /* 위로 솟은 깃발 · 몸짓과 칩이 겹치지 않게 */
   }
 
   .rope__who {
@@ -3438,6 +3516,7 @@ kbd {
   }
 
   .rope__rule {
+    margin-top: 10px; /* 승리선 · 패배선 라벨(밧줄 아래)과 겹치지 않게 */
     font-size: 0.72rem;
   }
 
@@ -3449,9 +3528,14 @@ kbd {
   .item-slot {
     min-height: 38px;
   }
+}
 
-  .danger {
-    padding: 6px 10px;
+/* 폰: 하트 3개가 HUD 칸 한 줄에 들어가게 화면 폭에 맞춰 줄임 (하트가 더 많으면 다음 줄로) */
+@media (max-width: 640px) {
+  .hearts {
+    flex-wrap: wrap;
+    gap: 0;
+    font-size: clamp(0.65rem, 3.3vw, 1.1rem);
   }
 }
 
@@ -3661,6 +3745,29 @@ kbd {
   .game-overlay__card {
     gap: 6px;
     padding: 12px;
+  }
+
+  /* 키 작은 폰은 칸이 모자라 자리 잡기는 빼고 깃발과 닿지 않을 만큼만 띄움 */
+  .tug-field__effects {
+    min-height: 0;
+    margin-bottom: 4px;
+  }
+
+  /* 밧줄 아래 안내 줄은 빼서 아이템 칸이 안 잘리게 — 규칙은 시작 화면, 위험은 위 막대에 같은 말이 있다 */
+  .rope__rule {
+    display: none;
+  }
+
+  .item-slot {
+    min-height: 34px;
+  }
+
+  .tug-field {
+    gap: 4px;
+  }
+
+  .tug-choice {
+    min-height: 46px;
   }
 
   .game-overlay__title {

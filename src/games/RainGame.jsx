@@ -5,7 +5,6 @@ import GameStat from './GameStat';
 import {
   Banner,
   Countdown,
-  DangerBar,
   GameGuide,
   LangPicker,
   Popups,
@@ -242,8 +241,6 @@ export default function RainGame({ mode, autoStart, onModeChange, onExit }) {
 
   const game = g.current;
   const slowed = game.clock < game.slowUntil;
-  // 데드라인에 가장 가까운 것 — 이게 닿으면 게임 오버 (방패가 있으면 한 번 막는다)
-  const lowest = game.items.reduce((max, it) => (!max || it.y > max.y ? it : max), null);
 
   return (
     <div className={`game ${slowed ? 'is-slow' : ''}`}>
@@ -253,18 +250,6 @@ export default function RainGame({ mode, autoStart, onModeChange, onExit }) {
         <GameStat label="연속" value={game.combo} sub={`점수 ×${multiplier(game.combo)}`} />
         <GameStat label="방패" value={game.shields ? '🛡️'.repeat(game.shields) : '없음'} />
       </div>
-
-      <DangerBar
-        label={
-          game.shields > 0
-            ? `🛡️ 방패 ${game.shields}개 — 빨간 선에 닿아도 ${game.shields}번 버텨요`
-            : '☠️ 하나라도 빨간 선에 닿으면 게임 오버'
-        }
-        ratio={status === 'playing' && lowest ? lowest.y : 0}
-        detail={
-          lowest && status === 'playing' ? `제일 아래 「${lowest.word}」 · 남은 거리 ${Math.round((1 - lowest.y) * 100)}%` : null
-        }
-      />
 
       <div ref={fieldRef} className="game__field rain-field">
         {game.items.map((item) => (
