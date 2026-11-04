@@ -40,8 +40,28 @@ function progressOf(target, input, composing) {
   return { strokes, typo: false };
 }
 
+const SMOOTH_SAMPLES = 2; // 앞뒤로 이만큼(×TRACE_STEP초)씩 평균
+const STEADY_SHARE = 0.4; // 유령 움직임 중 고른 속도의 몫 — 기록이 멈춘 곳에서도 이 비율만큼은 계속 간다
+
 /**
- * 이번 판 유령 — 고스트 레이스에서 낸 내 최고 기록(움직임 그대로)과 단문 연습 최고 타수 중 빠른 쪽.
+ * 기록을 1초 폭으로 고르게 — 잠깐 멈칫한 곳에서도 유령이 멈췄다 튀지 않고 계속 나아가게.
+ * 출발(0타)과 도착(마지막 타수)은 그대로 둔다.
+ */
+function smoothTrace(trace) {
+  if (!trace?.length) return trace;
+  const last = trace.length - 1;
+  return trace.map((value, i) => {
+    if (i === 0 || i === last) return value;
+    const from = Math.max(0, i - SMOOTH_SAMPLES);
+    const to = Math.min(last, i + SMOOTH_SAMPLES);
+    let sum = 0;
+    for (let k = from; k <= to; k += 1) sum += trace[k];
+    return sum / (to - from + 1);
+  });
+}
+
+/**
+ * 이번 판 유령 —고스트 레이스에서 낸 내 최고 기록(움직임 그대로)과 단문 연습 최고 타수 중 빠른 쪽.
  * 둘 다 없으면 기본 유령. 어느 쪽이든 GHOST_PACE만큼 빠르게 (speed는 빨라진 타수)
  */
 function chooseGhost(mode) {
@@ -49,24 +69,32 @@ function chooseGhost(mode) {
   const practice = getBest(mode);
   const paced = (speed) => Math.round(speed * GHOST_PACE);
   if (own && (!practice || own.speed >= practice.speed)) {
-    return { trace: own.trace, speed: paced(own.speed), source: '고스트 레이스 내 최고 기록' };
+    return { trace: smoothTrace(own.trace), speed: paced(own.speed), source: '고스트 레이스 내 최고 기록' };
   }
   if (practice) return { speed: paced(practice.speed), trace: null, source: '단문 연습 내 최고 기록' };
   return { speed: paced(DEFAULT_GHOST_SPEED), trace: null, source: '아직 기록이 없어 기본 유령' };
 }
 
-/**
- * t초에 유령이 친 타수 — 기록(trace)이 있으면 GHOST_PACE배 빨리 감아 따라가고, 기록이 끝나면 평균 속도로 이어 간다
- */
-function ghostStrokesAt(ghost, t) {
+/** 기록(trace)을 GHOST_PACE배 빨리 감아 t초에 친 타수 — 기록이 끝나면 평균 속도로 이어 간다 */
+function replayAt(ghost, t) {
   const rate = ghost.speed / 60;
   const { trace } = ghost;
-  if (!trace?.length) return rate * t;
   const i = (t * GHOST_PACE) / TRACE_STEP;
   const last = trace.length - 1;
   if (i >= last) return trace[last] + rate * (t - (last * TRACE_STEP) / GHOST_PACE);
   const k = Math.floor(i);
   return trace[k] + (trace[k + 1] - trace[k]) * (i - k);
+}
+
+/**
+ * t초에 유령이 친 타수 — 기록이 없으면 고른 속도로.
+ * 기록이 있으면 기록대로(멈칫 · 빨라짐) 달리되 고른 속도를 STEADY_SHARE만큼 섞어서, 내가 오래 멈췄던 곳에서도
+ * 유령은 멈추지 않고 계속 나아간다. 평균 속도가 같으니 도착 시각은 그대로.
+ */
+function ghostStrokesAt(ghost, t) {
+  const steady = (ghost.speed / 60) * t;
+  if (!ghost.trace?.length) return steady;
+  return replayAt(ghost, t) * (1 - STEADY_SHARE) + steady * STEADY_SHARE;
 }
 
 /** 유령이 total타를 다 치는 시각(초) */
