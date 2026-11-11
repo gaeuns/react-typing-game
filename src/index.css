@@ -1195,7 +1195,7 @@ kbd {
 }
 
 .lobby__desc {
-  margin: 0 0 20px;
+  margin: 0 0 14px;
   font-size: 0.9rem;
   color: var(--ink-soft);
 }
@@ -1204,15 +1204,15 @@ kbd {
   display: grid;
   /* 게임 6종이 3 × 2로 (4 + 2로 비지 않게) — 좁으면 2줄 · 1줄 */
   grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
 .game-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
-  padding: 24px 20px;
+  gap: 6px;
+  padding: 16px 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -1228,7 +1228,7 @@ kbd {
 }
 
 .game-card__icon {
-  font-size: 2.5rem;
+  font-size: 2rem;
   line-height: 1;
 }
 
@@ -1252,17 +1252,23 @@ kbd {
   font-size: 0.8rem;
 }
 
-/* 게임 목록 + 랭킹이 화면보다 길면 목록 안에서 스크롤 */
+/* 게임 목록은 그대로, 랭킹이 남은 높이를 채우고 그 안에서 스크롤 — 화면이 아주 낮으면 목록 전체가 스크롤 */
 .lobby {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
 }
 
 /* ─── 랭킹 (게임 목록 아래) ───────────────────────────────────── */
 .ranking {
-  margin-top: 20px;
-  padding: 20px;
+  flex: 1 0 180px; /* 남은 높이를 채우되 최소 이만큼 (1~3위 정도는 보이게) */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 16px;
+  padding: 16px 20px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
@@ -1317,7 +1323,11 @@ kbd {
 }
 
 .ranking__list {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
   display: grid;
+  align-content: start;
   gap: 4px;
   margin: 0;
   padding: 0;
@@ -1513,25 +1523,6 @@ kbd {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   max-width: 400px;
-}
-
-.home__features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 20px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.home__features li {
-  padding: 5px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--bg);
-  font-size: 0.8rem;
-  color: var(--ink-soft);
-  white-space: nowrap;
 }
 
 /* 키보드 그림 */
@@ -2060,8 +2051,15 @@ kbd {
     padding: 18px;
   }
 
+  /* 폰: 카드가 한 줄씩이라 한 화면에 다 못 들어온다 — 랭킹 안 스크롤 대신 목록 전체를 스크롤 */
   .ranking {
+    flex: none;
     padding: 14px;
+  }
+
+  .ranking__list {
+    flex: none;
+    overflow: visible;
   }
 
   /* 작품 목록: 긴 제목도 들어가게 "작품" 글자는 빼고 조금 작게 */
@@ -3529,6 +3527,38 @@ kbd {
   .key-guide {
     padding: 8px 12px;
     gap: 6px;
+  }
+
+  /* 게임 목록: 카드를 조금 촘촘히 — 아래 랭킹 칸에 줄이 더 보이게 */
+  .lobby__title {
+    margin-top: 0;
+    font-size: 1.35rem;
+  }
+
+  .lobby__desc {
+    margin-bottom: 10px;
+  }
+
+  .game-card {
+    gap: 4px;
+    padding: 12px 16px;
+  }
+
+  .game-card__icon {
+    font-size: 1.7rem;
+  }
+
+  .ranking {
+    margin-top: 12px;
+    padding: 12px 16px;
+  }
+
+  .ranking__head {
+    margin-bottom: 8px;
+  }
+
+  .ranking__row {
+    min-height: 34px;
   }
 }
 

@@ -4,12 +4,12 @@ import { GAMES, gamesFor, isBetter, scoreText } from '../data/games';
 import { fetchRanking, medalClass } from '../utils/ranking';
 import { supabase } from '../utils/supabase';
 
-const TOP = 5;
+const TOP = 3;
 const MEDALS = ['🥇', '🥈', '🥉'];
 const FLASH_MS = 2500;
 
 /**
- * 홈 화면 실시간 랭킹 — 게임마다 상위 5명을 나란히 (English면 한글 전용 게임은 빼고).
+ * 홈 화면 실시간 랭킹 — 게임마다 상위 3명을 나란히 (English면 한글 전용 게임은 빼고).
  * 누가 점수를 올리면(Supabase Realtime) 그 게임 순위를 바로 다시 불러오고, 새 기록 줄을 잠깐 반짝인다.
  */
 export default function LiveRanking({ mode }) {

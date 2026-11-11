@@ -3,13 +3,6 @@ import AuthCard from '../components/AuthCard';
 import TypingDemo from '../components/TypingDemo';
 import HomeIllustration from '../components/HomeIllustration';
 import LiveRanking from '../components/LiveRanking';
-import { GAMES } from '../data/games';
-
-const FEATURES = [
-  ['⌨️', '자리 · 낱말 · 단문 · 장문 · 60초'],
-  ['🎮', `타자 게임 ${GAMES.length}종`],
-  ['🏆', '실시간 랭킹'],
-];
 
 /** 메인 화면 — 소개 · 바로 시작 + 키보드 그림, 아래에 실시간 랭킹과 로그인 카드 */
 export default function HomeView({ mode, onModeChange, onOpenNav, onNavigate }) {
@@ -36,14 +29,6 @@ export default function HomeView({ mode, onModeChange, onOpenNav, onNavigate }) 
                 🎮 타자 게임
               </button>
             </div>
-
-            <ul className="home__features">
-              {FEATURES.map(([icon, text]) => (
-                <li key={text}>
-                  <span aria-hidden="true">{icon}</span> {text}
-                </li>
-              ))}
-            </ul>
           </div>
 
           <HomeIllustration />
