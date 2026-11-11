@@ -43,7 +43,7 @@ export async function submitScore(game, mode, score, level) {
 }
 
 /**
- * 게임 · 언어별 위에서부터 limit명 — [{ rank, user_id, nickname, score, level }]
+ * 게임 · 언어별 위에서부터 limit명 — [{ rank, nickname, score, level, is_me }]
  * fresh: 같은 요청이 진행 중이어도 새로 묻는다 (실시간 갱신 — 그 사이에 들어온 기록까지 받아야 해서)
  */
 export function fetchRanking(game, mode, limit = 10, { fresh = false } = {}) {
