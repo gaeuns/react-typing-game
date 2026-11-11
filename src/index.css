@@ -1850,19 +1850,21 @@ kbd {
   gap: 10px;
 }
 
-/* 회원탈퇴는 잘못 누르지 않게 작은 글자 링크로 */
+/* 회원탈퇴 — 눈에 띄되 주 버튼보다는 작게 (누르면 비밀번호를 한 번 더 묻는다) */
 .auth-card__leave {
   align-self: flex-end;
-  padding: 2px 0;
-  border: 0;
-  background: none;
-  color: var(--ink-faint);
-  font-size: 0.75rem;
-  text-decoration: underline;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--wrong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wrong);
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .auth-card__leave:hover {
-  color: var(--wrong);
+  background: var(--wrong-bg);
 }
 
 .auth-form {
