@@ -253,7 +253,7 @@ export default function AuthCard({ onPlay }) {
                 value={form.passwordConfirm}
                 onChange={update('passwordConfirm')}
                 autoComplete="new-password"
-                placeholder="비밀번호를 한 번 더"
+                placeholder="비밀번호 재입력"
                 aria-invalid={!!form.passwordConfirm && form.passwordConfirm !== form.password}
                 required
               />
