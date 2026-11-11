@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
 import RankNote from './RankNote';
+import { startGameSession } from '../utils/ranking';
 import GameStat from './GameStat';
 import {
   Banner,
@@ -100,6 +101,7 @@ export default function RainGame({ mode, autoStart, onModeChange, onExit }) {
 
   // 시작 · 다시 하기 → 3 · 2 · 1 → begin
   const start = () => {
+    startGameSession('rain', mode); // 랭킹 점수는 이 판의 서버 세션으로만 올라간다
     g.current = freshGame();
     setResult(null);
     setStatus('countdown');

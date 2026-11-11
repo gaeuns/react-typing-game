@@ -13,7 +13,7 @@ import { FINGER_NAME, STAGES, fingerOf, keyForStroke, keyLabel } from '../data/k
 import { calcAccuracy, calcSpeed, compareInput } from '../utils/calculate';
 import { isPrefix, toKeystrokes } from '../utils/hangul';
 import { getBest, saveIfBest } from '../utils/storage';
-import { saveAccountBest } from '../utils/practiceBests';
+import { saveAccountBest, startPracticeSession } from '../utils/practiceBests';
 import { useAuth } from '../hooks/useAuth';
 import { playKey, playWrong } from '../utils/sound';
 import { AUTO_LANG, applyKey } from '../utils/hangulInput';
@@ -177,6 +177,13 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     window.addEventListener('tadak:bests', refresh);
     return () => window.removeEventListener('tadak:bests', refresh);
   }, [kind, mode, keyStage]);
+
+  // 판마다 서버 세션 — 계정 최고 기록은 이 세션으로만 올라간다 (다시 하기 · 다음 · 종류 바꾸기마다 새로)
+  const sessionKey = bestKey(kind, mode, keyStage);
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId) startPracticeSession(sessionKey);
+  }, [roundId, sessionKey, userId]);
 
   // F5: 페이지 새로고침 대신 하던 연습을 처음부터 (Ctrl · Shift + F5 강력 새로고침은 브라우저에 맡긴다)
   const resetRef = useRef(resetRound);

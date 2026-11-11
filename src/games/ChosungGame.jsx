@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
 import RankNote from './RankNote';
+import { startGameSession } from '../utils/ranking';
 import GameStat from './GameStat';
 import { Countdown, GameGuide, Popups, addPopup, pruneEffects } from './GameBits';
 import useGameInput from './useGameInput';
@@ -57,6 +58,7 @@ export default function ChosungGame({ autoStart, onExit }) {
   const focusInput = () => setTimeout(() => inputRef.current?.focus(), 0);
 
   const start = () => {
+    startGameSession('chosung', 'ko'); // 랭킹 점수는 이 판의 서버 세션으로만 올라간다
     g.current = freshGame();
     setResult(null);
     setStatus('countdown');

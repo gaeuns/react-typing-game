@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import GameOverlay from './GameOverlay';
 import RankNote from './RankNote';
+import { startGameSession } from '../utils/ranking';
 import GameStat from './GameStat';
 import { Banner, Countdown, GameGuide, LangPicker, showBanner, pruneEffects } from './GameBits';
 import useGameLoop from './useGameLoop';
@@ -167,6 +168,7 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
   };
 
   const start = () => {
+    startGameSession('ghost', mode); // 랭킹 점수는 이 판의 서버 세션으로만 올라간다
     g.current = freshGame(mode);
     resetInput();
     setResult(null);
