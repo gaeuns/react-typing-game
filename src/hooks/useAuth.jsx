@@ -147,7 +147,7 @@ export function AuthProvider({ children }) {
     loading,
     user,
     username: user?.email?.endsWith(`@${LOGIN_DOMAIN}`) ? user.email.split('@')[0] : null, // user_metadata는 본인이 바꿀 수 있어서 안 쓴다
-    nickname: user ? (profileNickname ?? user.user_metadata?.nickname ?? null) : null,
+    nickname: user ? profileNickname : null, // profiles에서만 — user_metadata는 본인이 아무 값으로나 바꿀 수 있어서
     signIn,
     signUp,
     signOut,
