@@ -14,7 +14,7 @@ export async function loadAccountBests() {
   if (!uid) return;
   const [practice, games] = await Promise.all([
     supabase.from('practice_bests').select('key, speed, accuracy, time, updated_at'),
-    supabase.from('game_best').select('game, mode, score, level, created_at').eq('user_id', uid),
+    supabase.rpc('my_game_bests'),
   ]);
   if (practice.error) throw practice.error;
   if (games.error) throw games.error;
@@ -23,7 +23,7 @@ export async function loadAccountBests() {
       practice.data.map((r) => [r.key, { speed: r.speed, accuracy: Number(r.accuracy), time: r.time, date: r.updated_at }]),
     ),
     games: Object.fromEntries(
-      games.data.map((r) => [`${r.game}:${r.mode}`, { score: r.score, level: r.level, date: r.created_at }]),
+      games.data.map((r) => [`${r.game}:${r.mode}`, { score: r.score, level: r.level, date: r.achieved_at }]),
     ),
   });
 }

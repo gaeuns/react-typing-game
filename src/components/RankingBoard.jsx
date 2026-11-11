@@ -30,7 +30,7 @@ export default function RankingBoard({ mode }) {
 
   if (!configured) return null;
 
-  const meInTop = board.rows.some((r) => r.user_id === user?.id);
+  const meInTop = board.rows.some((r) => r.is_me);
 
   return (
     <section className="ranking" aria-labelledby="ranking-title">
@@ -67,8 +67,8 @@ export default function RankingBoard({ mode }) {
         <ol className="ranking__list">
           {board.rows.map((r) => (
             <li
-              key={r.user_id}
-              className={['ranking__row', medalClass(r.rank), r.user_id === user?.id && 'is-me'].filter(Boolean).join(' ')}
+              key={r.nickname}
+              className={['ranking__row', medalClass(r.rank), r.is_me && 'is-me'].filter(Boolean).join(' ')}
             >
               <span className="ranking__rank">{MEDALS[r.rank - 1] ?? r.rank}</span>
               <span className="ranking__name">{r.nickname}</span>
