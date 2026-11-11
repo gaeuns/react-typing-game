@@ -8,7 +8,7 @@ import {
   useAuth,
 } from '../hooks/useAuth';
 
-const EMPTY_FORM = { username: '', password: '', nickname: '', email: '' };
+const EMPTY_FORM = { username: '', password: '', passwordConfirm: '', nickname: '', email: '' };
 const EMPTY_CHECKS = { username: null, nickname: null }; // { value, ok, message } — 확인한 값이 지금 값과 같아야 통과
 
 /**
@@ -17,12 +17,14 @@ const EMPTY_CHECKS = { username: null, nickname: null }; // { value, ok, message
  * 로그인하지 않아도 연습 · 게임은 그대로 할 수 있고, 로그인하면 게임 점수가 랭킹에 올라간다.
  */
 export default function AuthCard({ onPlay }) {
-  const { configured, loading, user, username, nickname, signIn, signUp, signOut } = useAuth();
+  const { configured, loading, user, username, nickname, signIn, signUp, signOut, deleteAccount } = useAuth();
   const [tab, setTab] = useState('signin'); // signin | signup
   const [form, setForm] = useState(EMPTY_FORM);
   const [checks, setChecks] = useState(EMPTY_CHECKS);
   const [message, setMessage] = useState(null); // { tone: 'error' | 'info', text }
   const [busy, setBusy] = useState(false);
+  const [leaving, setLeaving] = useState(null); // 회원탈퇴 확인 중이면 { password, error }
+  const [farewell, setFarewell] = useState(false); // 방금 탈퇴함 — 로그인 화면에 안내 (로그아웃 때 message는 비워지므로 따로)
 
   // 로그인 · 로그아웃이 바뀌면 입력값 · 탭 · 안내를 처음 상태로 (로그아웃 뒤 비밀번호가 남지 않게)
   const userId = user?.id;
@@ -31,6 +33,7 @@ export default function AuthCard({ onPlay }) {
     setChecks(EMPTY_CHECKS);
     setTab('signin');
     setMessage(null);
+    setLeaving(null);
   }, [userId]);
 
   if (!configured) {
@@ -51,6 +54,54 @@ export default function AuthCard({ onPlay }) {
   }
 
   if (user) {
+    const leave = async (e) => {
+      e.preventDefault();
+      if (busy) return;
+      setBusy(true);
+      const res = await deleteAccount(leaving.password);
+      setBusy(false);
+      if (res.error) setLeaving((l) => l && { ...l, error: res.error });
+      else setFarewell(true);
+    };
+
+    if (leaving) {
+      return (
+        <section className="auth-card" aria-label="회원탈퇴">
+          <h2 className="auth-card__title">회원탈퇴</h2>
+          <p className="auth-card__note">
+            계정과 게임 · 연습 기록, 랭킹 기록이 모두 지워지고 되돌릴 수 없어요. 계속하려면 비밀번호를 입력해 주세요.
+          </p>
+          <form className="auth-form" onSubmit={leave}>
+            <div className="auth-form__field">
+              <label htmlFor="leave-password">비밀번호</label>
+              <input
+                id="leave-password"
+                type="password"
+                value={leaving.password}
+                onChange={(e) => setLeaving({ password: e.target.value, error: null })}
+                autoComplete="current-password"
+                required
+                autoFocus
+              />
+            </div>
+            {leaving.error && (
+              <p className="auth-form__message is-error" role="alert">
+                {leaving.error}
+              </p>
+            )}
+            <div className="auth-card__actions">
+              <button type="button" className="btn btn--ghost" onClick={() => setLeaving(null)} disabled={busy}>
+                취소
+              </button>
+              <button type="submit" className="btn btn--danger" disabled={busy}>
+                {busy ? '잠시만요…' : '탈퇴하기'}
+              </button>
+            </div>
+          </form>
+        </section>
+      );
+    }
+
     return (
       <section className="auth-card" aria-label="내 계정">
         <p className="auth-card__hello">
@@ -71,6 +122,9 @@ export default function AuthCard({ onPlay }) {
             로그아웃
           </button>
         </div>
+        <button type="button" className="auth-card__leave" onClick={() => setLeaving({ password: '', error: null })}>
+          회원탈퇴
+        </button>
       </section>
     );
   }
@@ -83,6 +137,7 @@ export default function AuthCard({ onPlay }) {
   const switchTab = (next) => {
     setTab(next);
     setMessage(null);
+    setFarewell(false);
   };
 
   // 지금 칸의 값으로 중복 확인을 통과했는지
@@ -111,6 +166,10 @@ export default function AuthCard({ onPlay }) {
       setMessage({ tone: 'error', text: '아이디와 닉네임 중복 확인을 해 주세요.' });
       return;
     }
+    if (isSignUp && form.password !== form.passwordConfirm) {
+      setMessage({ tone: 'error', text: '비밀번호와 비밀번호 확인이 달라요.' });
+      return;
+    }
     setBusy(true);
     setMessage(null);
     const res = isSignUp ? await signUp(form) : await signIn(form.username, form.password);
@@ -137,6 +196,12 @@ export default function AuthCard({ onPlay }) {
           </button>
         ))}
       </div>
+
+      {farewell && (
+        <p className="auth-form__message is-info" role="status">
+          탈퇴했어요. 계정과 기록을 모두 지웠어요.
+        </p>
+      )}
 
       <form className="auth-form" onSubmit={handleSubmit}>
         <div className="auth-form__field">
@@ -180,6 +245,26 @@ export default function AuthCard({ onPlay }) {
 
         {isSignUp && (
           <>
+            <div className="auth-form__field">
+              <label htmlFor="auth-password-confirm">비밀번호 확인</label>
+              <input
+                id="auth-password-confirm"
+                type="password"
+                value={form.passwordConfirm}
+                onChange={update('passwordConfirm')}
+                autoComplete="new-password"
+                placeholder="비밀번호를 한 번 더"
+                aria-invalid={!!form.passwordConfirm && form.passwordConfirm !== form.password}
+                required
+              />
+              {form.passwordConfirm &&
+                (form.passwordConfirm === form.password ? (
+                  <span className="auth-form__check is-ok" role="status">✓ 비밀번호가 같아요.</span>
+                ) : (
+                  <span className="auth-form__check is-error" role="status">비밀번호가 달라요.</span>
+                ))}
+            </div>
+
             <div className="auth-form__field">
               <label htmlFor="auth-nickname">닉네임 · 랭킹에 보이는 이름</label>
               <span className="auth-form__hint">{NICKNAME_HINT}</span>

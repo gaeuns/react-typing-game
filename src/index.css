@@ -913,6 +913,15 @@ kbd {
   border-color: var(--ink-faint);
 }
 
+.btn--danger {
+  background: var(--wrong);
+  color: #fff;
+}
+
+.btn--danger:hover {
+  filter: brightness(1.08);
+}
+
 /* ─── 결과 모달 ──────────────────────────────────────────────── */
 .modal-backdrop {
   position: fixed;
@@ -1839,6 +1848,21 @@ kbd {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 10px;
+}
+
+/* 회원탈퇴는 잘못 누르지 않게 작은 글자 링크로 */
+.auth-card__leave {
+  align-self: flex-end;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 0.75rem;
+  text-decoration: underline;
+}
+
+.auth-card__leave:hover {
+  color: var(--wrong);
 }
 
 .auth-form {

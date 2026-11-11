@@ -132,6 +132,18 @@ export function AuthProvider({ children }) {
     clearLocalBests();
   };
 
+  /** 회원탈퇴 — 비밀번호로 본인 확인 뒤 계정 · 기록을 모두 지운다 (되돌릴 수 없음) */
+  const deleteAccount = async (password) => {
+    if (!user?.email) return { error: '로그인 상태를 확인해 주세요.' };
+    const check = await supabase.auth.signInWithPassword({ email: user.email, password });
+    if (check.error) return { error: /invalid login credentials/i.test(check.error.message) ? '비밀번호가 맞지 않아요.' : toMessage(check.error) };
+    const { error } = await supabase.rpc('delete_my_account');
+    if (error) return { error: toMessage(error) };
+    await supabase.auth.signOut({ scope: 'local' }); // 서버엔 이미 계정이 없으니 이 기기 세션만 지운다
+    clearLocalBests();
+    return {};
+  };
+
   const value = {
     configured: !!supabase,
     loading,
@@ -141,6 +153,7 @@ export function AuthProvider({ children }) {
     signIn,
     signUp,
     signOut,
+    deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
