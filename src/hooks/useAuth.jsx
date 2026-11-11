@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../utils/supabase';
-import { clearLocalBests, loadAccountBests } from '../utils/practiceBests';
+import { forgetAccountBests, loadAccountBests } from '../utils/practiceBests';
 
 /**
  * 로그인 상태 — 앱 전체가 같이 쓴다 (사이드바 닉네임, 메인 화면, 게임 랭킹).
@@ -9,8 +9,8 @@ import { clearLocalBests, loadAccountBests } from '../utils/practiceBests';
  * 아이디로 가입 · 로그인한다. Supabase Auth는 이메일이 있어야 해서 "아이디@tadak.invalid"를 넣어 쓴다
  * (.invalid는 실제로 존재할 수 없는 도메인이라 메일이 나가지 않는다). 이메일(선택)은 user_metadata에만 둔다.
  *
- * 타자 연습 최고 기록: 로그인 · 가입할 때마다 이 기기 기록을 비우고 계정 기록을 불러온다.
- * 이미 로그인된 채로 페이지를 열면 계정 기록으로 맞추고, 로그아웃하면 비운다 (utils/practiceBests.js).
+ * 최고 기록(연습 · 게임): 로그인한 동안에는 계정 기록(DB)을 보여 주고, 로그아웃하면 이 기기 기록으로 돌아간다
+ * (utils/practiceBests.js · storage.js).
  */
 const AuthContext = createContext(null);
 
@@ -73,7 +73,9 @@ export function AuthProvider({ children }) {
     });
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
-      if (event === 'SIGNED_OUT') clearLocalBests(); // 다른 탭에서 로그아웃해도
+      // 로그인 · 가입하면 계정 기록으로, 로그아웃하면 이 기기 기록으로 (다른 탭에서 바뀌어도)
+      if (event === 'SIGNED_IN') loadAccountBests().catch(() => {});
+      if (event === 'SIGNED_OUT') forgetAccountBests();
     });
     return () => data.subscription.unsubscribe();
   }, []);
@@ -99,10 +101,7 @@ export function AuthProvider({ children }) {
     if (!username.trim()) return { error: '아이디를 입력해 주세요.' };
     const { error } = await supabase.auth.signInWithPassword({ email: toLoginEmail(username), password });
     if (error) return { error: toMessage(error) };
-    // 로그인할 때마다 이 기기 기록은 비우고 내 계정 기록으로
-    clearLocalBests();
-    loadAccountBests().catch(() => {});
-    return {};
+    return {}; // 계정 기록은 SIGNED_IN에서 불러온다
   };
 
   /** 회원가입 — 아이디 · 닉네임 중복 확인은 화면에서 먼저 끝낸다. 이메일은 선택 */
@@ -123,13 +122,12 @@ export function AuthProvider({ children }) {
     if (error) return { error: toMessage(error) };
     // 이미 있는 아이디면 Supabase는 오류 없이 빈 identities를 돌려줄 때가 있다
     if (data.user && data.user.identities?.length === 0) return { error: '이미 있는 아이디예요. 중복 확인을 다시 해 주세요.' };
-    clearLocalBests(); // 새 계정은 기록 0부터
     return {};
   };
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    clearLocalBests();
+    forgetAccountBests();
   };
 
   /** 회원탈퇴 — 비밀번호로 본인 확인 뒤 계정 · 기록을 모두 지운다 (되돌릴 수 없음) */
@@ -140,7 +138,7 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.rpc('delete_my_account');
     if (error) return { error: toMessage(error) };
     await supabase.auth.signOut({ scope: 'local' }); // 서버엔 이미 계정이 없으니 이 기기 세션만 지운다
-    clearLocalBests();
+    forgetAccountBests();
     return {};
   };
 

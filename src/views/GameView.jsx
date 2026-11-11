@@ -36,6 +36,14 @@ export default function GameView({ mode, onModeChange, game, onSelectGame, onOpe
 
   const restart = () => setRun((r) => ({ ...r, id: r.id + 1, autoStart: true }));
 
+  // 로그인 · 로그아웃으로 최고 기록이 계정 것 ↔ 이 기기 것으로 바뀌면 게임 카드도 다시 그린다
+  const [, setBestsVersion] = useState(0);
+  useEffect(() => {
+    const refresh = () => setBestsVersion((v) => v + 1);
+    window.addEventListener('tadak:bests', refresh);
+    return () => window.removeEventListener('tadak:bests', refresh);
+  }, []);
+
   useEffect(() => {
     if (!Game) return undefined;
     const handleKeyDown = (e) => {

@@ -14,10 +14,32 @@ function once(key, run) {
   return inFlight.get(key);
 }
 
-/** 끝난 판의 점수를 올린다 (로그인했을 때만 부른다) */
+// 게임 · 언어마다 지금 판의 서버 세션 — 서버가 시작 시각을 기록해 두고, 점수를 올릴 때 걸린 시간으로 말이 되는지 확인한다
+const sessions = new Map();
+
+/**
+ * 판을 시작할 때(3 · 2 · 1) 부른다 — 로그인했을 때만 서버 세션을 연다.
+ * 세션은 한 판에 한 번만 점수를 받는다 (줄다리기는 다음 라운드마다 더 큰 점수로 다시).
+ */
+export function startGameSession(game, mode) {
+  if (!supabase) return;
+  const run = supabase.auth.getSession().then(async ({ data: auth }) => {
+    if (!auth.session) return null;
+    const { data, error } = await supabase.rpc('start_game', { p_game: game, p_mode: mode });
+    if (error) throw error;
+    return data;
+  });
+  run.catch(() => {}); // 실패는 점수를 올릴 때 알린다
+  sessions.set(`${game}:${mode}`, run);
+}
+
+/** 끝난 판의 점수를 올린다 (로그인했을 때만 부른다) — 서버 함수가 세션 · 점수를 확인하고 넣는다 */
 export async function submitScore(game, mode, score, level) {
-  const { error } = await supabase.from('game_scores').insert({ game, mode, score, level });
+  const session = await sessions.get(`${game}:${mode}`);
+  if (!session) throw new Error('no game session');
+  const { data, error } = await supabase.rpc('submit_score', { p_session: session, p_score: score, p_level: level });
   if (error) throw error;
+  if (data !== 'ok') throw new Error(data); // 서버가 거절한 이유 (implausible score 등)
 }
 
 /**
