@@ -2,6 +2,8 @@
 
 > React로 만든 한글 · 영어 타자 연습 웹사이트 — 연습 5종 · 타자 게임 6종 · 실시간 랭킹
 
+🔗 **배포 링크:** https://typing-tadak.vercel.app/
+
 <img src="docs/screenshots/home.png" alt="메인 화면" width="100%">
 
 <br>
