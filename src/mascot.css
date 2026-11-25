@@ -1,0 +1,295 @@
+
+/* ─── 마스코트 '타닥이' ────────────────────────────────────────── */
+/* 문장 판 옆에 붙어서 오타면 시무룩, 잘 치면 방긋 */
+.board-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.mascot {
+  --mascot-body: #fff4e6;
+  --mascot-edge: #f0c9a4;
+  --mascot-ink: #3b2a1e;
+  --mascot-cheek: #ffb3a1;
+  position: relative;
+  width: 104px;
+  padding-top: 40px; /* 말풍선 자리 */
+  user-select: none;
+  pointer-events: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mascot {
+    --mascot-body: #fbe9d6;
+    --mascot-edge: #e0b48c;
+    --mascot-cheek: #ff9f8a;
+  }
+}
+
+.mascot__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* 몸 */
+.mascot__body {
+  fill: var(--mascot-body);
+  stroke: var(--mascot-edge);
+  stroke-width: 2.5;
+}
+.mascot__shine {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+.mascot__shadow {
+  fill: var(--ink);
+  opacity: 0.08;
+  transform-origin: 60px 112px;
+}
+.mascot__cheek {
+  fill: var(--mascot-cheek);
+  opacity: 0.75;
+  transition: opacity 0.2s;
+}
+.mascot__arm {
+  fill: none;
+  stroke: var(--mascot-edge);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mascot__arm--l { transform-origin: 26px 78px; }
+.mascot__arm--r { transform-origin: 94px 78px; }
+
+/* 얼굴 — 기본은 숨기고 기분에 맞는 것만 보인다 */
+.mascot__eyes,
+.mascot__mouth,
+.mascot__tear,
+.mascot__cloud,
+.mascot__sparkles {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.mascot__eyes--open ellipse { fill: var(--mascot-ink); }
+.mascot__glint { fill: #fff; }
+.mascot__eyes--smile path,
+.mascot__eyes--sad path,
+.mascot__mouth--idle,
+.mascot__mouth--sad {
+  fill: none;
+  stroke: var(--mascot-ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.mascot__mouth--happy {
+  fill: #e8604c;
+  stroke: var(--mascot-ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.mascot__tear { fill: #6cb6ff; }
+.mascot__cloud ellipse { fill: #9aa3ad; }
+.mascot__cloud line {
+  stroke: #6cb6ff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.mascot__sparkles path { fill: #fbbf24; }
+
+/* idle */
+.mascot--idle .mascot__eyes--open,
+.mascot--idle .mascot__mouth--idle { opacity: 1; }
+.mascot--idle .mascot__eyes--open { animation: mascot-blink 4s infinite; transform-origin: 60px 74px; }
+.mascot--idle .mascot__squish { animation: mascot-breathe 3s ease-in-out infinite; }
+
+/* happy */
+.mascot--happy .mascot__eyes--smile,
+.mascot--happy .mascot__mouth--happy { opacity: 1; }
+.mascot--happy .mascot__cheek { opacity: 1; }
+
+/* cheer = happy + 만세 + 반짝이 */
+.mascot--cheer .mascot__eyes--smile,
+.mascot--cheer .mascot__mouth--happy,
+.mascot--cheer .mascot__sparkles { opacity: 1; }
+.mascot--cheer .mascot__cheek { opacity: 1; }
+.mascot--cheer .mascot__arm--l { transform: rotate(22deg) translateY(-4px); }
+.mascot--cheer .mascot__arm--r { transform: rotate(-22deg) translateY(-4px); }
+.mascot--cheer .mascot__sparkles { animation: mascot-twinkle 0.9s ease-in-out infinite alternate; transform-origin: 60px 40px; }
+.mascot--cheer .mascot__svg { animation: mascot-hop 0.6s ease-in-out infinite; }
+
+/* sad */
+.mascot--sad .mascot__eyes--sad,
+.mascot--sad .mascot__mouth--sad,
+.mascot--sad .mascot__tear,
+.mascot--sad .mascot__cloud { opacity: 1; }
+.mascot--sad .mascot__cheek { opacity: 0.3; }
+.mascot--sad .mascot__arm--l { transform: rotate(-35deg); }
+.mascot--sad .mascot__arm--r { transform: rotate(35deg); }
+.mascot--sad .mascot__svg { animation: mascot-droop 0.35s ease-out forwards, mascot-shake 0.35s ease-in-out; }
+.mascot--sad .mascot__tear { animation: mascot-tear 1.4s ease-in infinite; }
+.mascot--sad .mascot__cloud { animation: mascot-cloud 2s ease-in-out infinite; }
+
+/* 키 칠 때마다 한 번 말랑 (beat가 바뀌면 is-squish를 다시 붙여 재생) */
+.mascot--happy .mascot__squish.is-squish,
+.mascot--cheer .mascot__squish.is-squish,
+.mascot--sad .mascot__squish.is-squish {
+  animation: mascot-squish 0.22s ease-out;
+  transform-origin: 50% 100%;
+}
+
+/* 반창고 */
+.mascot__bandage {
+  animation: mascot-bandage 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+/* 몸(살구색)과 섞이지 않게 핑크 + 진한 테두리 */
+.mascot__bandage rect {
+  fill: #ff8fab;
+  stroke: #d6336c;
+  stroke-width: 1.2;
+}
+.mascot__bandage .mascot__bandage-pad {
+  fill: #ffd6e0;
+  stroke: none;
+}
+.mascot__bandage circle { fill: #d6336c; }
+
+@keyframes mascot-bandage {
+  0% { transform: scale(0) rotate(-40deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* 말풍선 */
+.mascot__bubble {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 5px 10px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: mascot-pop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.mascot__bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  right: 30px;
+  width: 10px;
+  height: 10px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+.mascot--sad .mascot__bubble { color: var(--wrong); }
+.mascot--cheer .mascot__bubble { color: var(--accent-ink); }
+
+@keyframes mascot-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes mascot-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.03, 0.97); }
+}
+@keyframes mascot-squish {
+  0% { transform: scale(1, 1); }
+  40% { transform: scale(1.08, 0.9); }
+  100% { transform: scale(1, 1); }
+}
+@keyframes mascot-hop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes mascot-droop {
+  to { transform: translateY(3px) scale(1.02, 0.96); }
+}
+@keyframes mascot-shake {
+  0%, 100% { translate: 0; }
+  25% { translate: -3px; }
+  75% { translate: 3px; }
+}
+@keyframes mascot-tear {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(14px); opacity: 0; }
+}
+@keyframes mascot-cloud {
+  0%, 100% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+}
+@keyframes mascot-twinkle {
+  from { transform: scale(0.9); opacity: 0.6; }
+  to { transform: scale(1.05); opacity: 1; }
+}
+@keyframes mascot-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* 결과 창 — '수고했어요!' 옆 여백에 만세하는 마스코트 */
+.modal__head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.modal__head-text {
+  min-width: 0;
+}
+.mascot--no-bubble {
+  padding-top: 0;
+}
+.modal__head .mascot {
+  flex-shrink: 0;
+  width: 112px;
+  margin: 0 -4px -6px 0;
+}
+.modal__head .modal__unit {
+  white-space: nowrap; /* 마스코트 자리 때문에 '타/분'이 두 줄로 꺾이지 않게 */
+}
+@media (max-width: 480px) {
+  .modal__head .mascot {
+    width: 84px;
+  }
+}
+
+/* 좁은 화면에서는 판 위 오른쪽에 작게 */
+@media (max-width: 640px) {
+  .board-stage { grid-template-columns: minmax(0, 1fr); }
+  .board-stage .mascot {
+    grid-row: 1;
+    justify-self: end;
+    width: 72px;
+    padding-top: 0;
+    margin-bottom: -8px;
+  }
+  .board-stage .mascot__bubble {
+    top: auto;
+    bottom: 22px;
+    right: calc(100% + 4px);
+  }
+  .board-stage .mascot__bubble::after {
+    bottom: 8px;
+    right: -6px;
+    transform: rotate(-45deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot *,
+  .mascot *::after { animation: none !important; transition: none !important; }
+}

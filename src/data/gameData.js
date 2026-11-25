@@ -9,14 +9,14 @@ export const RAIN_SPECIALS = [
 
 // 줄다리기 대작전 — 내가 얻어서 쓰는 아이템 (금색 낱말을 치면 얻는다)
 export const PLAYER_ITEMS = [
-  { id: 'power', icon: '💪', name: '괴력', desc: '6초 동안 당기는 힘 2배' },
+  { id: 'power', icon: '💪', name: '괴력', desc: '6초 동안 낱말마다 2배로 당겨요' },
   { id: 'freeze', icon: '🧊', name: '얼음', desc: '상대가 4초 동안 못 당겨요' },
-  { id: 'yank', icon: '🪢', name: '한 번에 당기기', desc: '한 번에 크게 당겨요' },
+  { id: 'yank', icon: '🪢', name: '한 번에 당기기', desc: '바로 2칸 당겨요' },
 ];
 
 // 줄다리기 대작전 — 컴퓨터가 가끔 쓰는 방해 아이템
 export const CPU_ITEMS = [
-  { id: 'gust', icon: '🌪️', name: '돌풍', desc: '밧줄이 상대 쪽으로 확 끌려가요' },
+  { id: 'gust', icon: '🌪️', name: '돌풍', desc: '밧줄이 상대 쪽으로 한 칸 끌려가요' },
   { id: 'ink', icon: '🦑', name: '먹물', desc: '3초 동안 낱말이 흐려져요' },
 ];
 

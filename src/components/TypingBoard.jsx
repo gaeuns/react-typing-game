@@ -84,6 +84,8 @@ export default function TypingBoard({
               ]
                 .filter(Boolean)
                 .join(' ')}
+              // 틀린 글자 위에 실제로 친 글자를 작게 — 입력창을 안 내려다봐도 뭘 잘못 쳤는지 보이게
+              data-typed={state === 'wrong' ? input[i] : undefined}
             >
               {char}
             </span>

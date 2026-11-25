@@ -13,7 +13,8 @@ export default function useGameLoop(tick, running) {
     let frame;
     let last = performance.now();
     const step = (now) => {
-      const dt = Math.min((now - last) / 1000, 0.1);
+      // 첫 프레임의 rAF 시각이 effect에서 잰 시각보다 이를 수 있어 음수는 0으로
+      const dt = Math.max(0, Math.min((now - last) / 1000, 0.1));
       last = now;
       tickRef.current(dt);
       frame = requestAnimationFrame(step);

@@ -6,19 +6,21 @@ import ResultModal from '../components/ResultModal';
 import KeyPractice from '../components/KeyPractice';
 import KeyboardView from '../components/KeyboardView';
 import ViewHeader from '../components/ViewHeader';
+import Mascot, { MAX_WOUNDS } from '../components/Mascot';
 import useTimer from '../hooks/useTimer';
 import { PRACTICE_KINDS, TIMED_MS, getPassage, passageTitles, pickRound } from '../data/practice';
 import { FINGER_NAME, STAGES, fingerOf, keyForStroke, keyLabel } from '../data/keyboard';
 import { calcAccuracy, calcSpeed, compareInput } from '../utils/calculate';
 import { isPrefix, toKeystrokes } from '../utils/hangul';
 import { getBest, saveIfBest } from '../utils/storage';
-import { saveAccountBest } from '../utils/practiceBests';
+import { saveAccountBest, startPracticeSession } from '../utils/practiceBests';
 import { useAuth } from '../hooks/useAuth';
 import { playKey, playWrong } from '../utils/sound';
 import { AUTO_LANG, applyKey } from '../utils/hangulInput';
 
 const EMPTY_TOTALS = { correctChars: 0, correctStrokes: 0, typedChars: 0 };
 const FLASH_MS = 300; // 누른 키를 맞음/틀림 색으로 보여주는 시간
+const CHEER_STREAK = 20; // 오타 없이 이만큼 연달아 맞히면 마스코트가 만세
 // 사람이 낼 수 없는 속도 — 폰 추천 낱말 탭처럼 한 번에 낱말이 통째로 들어온 판은 최고 기록에 넣지 않는다
 const MAX_PLAUSIBLE_SPEED = 2000;
 
@@ -87,6 +89,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   const inputRef = useRef(null);
   const composingRef = useRef(false); // 이벤트 핸들러 안에서 최신 조합 상태를 읽기 위한 ref
   const advanceAfterCompose = useRef(false); // 마지막 글자를 조합하는 중에 스페이스 · Enter를 눌렀다
+  const advancedAt = useRef(0); // 다음 문장으로 넘어간 시각 — 넘기자마자 한 번 더 누른 스페이스만 무시하려고
 
   const items = round.items;
   const target = items[index];
@@ -103,6 +106,32 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   );
 
   const nextKey = useMemo(() => expectedKey(target, input, isComposing), [target, input, isComposing]);
+
+  // ─── 마스코트 기분 ────────────────────────────────────────────
+  // 지금 입력에 틀린 글자가 하나라도 있으면(조합 중인 글자가 목표에서 벗어난 것 포함) 시무룩
+  const composingChar = isComposing && input.length > 0 ? input[input.length - 1] : null;
+  const hasTypo =
+    current.typedChars > current.correctChars ||
+    (composingChar !== null &&
+      !isPrefix(toKeystrokes(composingChar), toKeystrokes(target.slice(input.length - 1, input.length + 1))));
+  const [streak, setStreak] = useState(0); // 오타 없이 연달아 맞힌 글자 수
+  const [wounds, setWounds] = useState(0); // 오타를 남긴 채 넘긴 문장 수 → 마스코트 반창고
+  const prevLength = useRef(0);
+  useEffect(() => {
+    const grew = input.length - prevLength.current;
+    prevLength.current = input.length;
+    if (hasTypo) setStreak(0);
+    else if (grew > 0) setStreak((n) => n + grew);
+  }, [input, hasTypo]);
+  useEffect(() => {
+    setStreak(0);
+    setWounds(0);
+    prevLength.current = 0;
+  }, [roundId]);
+  let mood = 'happy';
+  if (!timer.isRunning && index === 0 && input === '') mood = 'idle';
+  else if (hasTypo) mood = 'sad';
+  else if (streak >= CHEER_STREAK) mood = 'cheer';
 
   // 누른 키 표시는 잠깐만
   useEffect(() => {
@@ -127,6 +156,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     setRoundId((id) => id + 1);
     setIndex(0);
     setInput('');
+    advancedAt.current = Date.now();
     setIsComposing(false);
     composingRef.current = false;
     setTotals(EMPTY_TOTALS);
@@ -147,6 +177,13 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     window.addEventListener('tadak:bests', refresh);
     return () => window.removeEventListener('tadak:bests', refresh);
   }, [kind, mode, keyStage]);
+
+  // 판마다 서버 세션 — 계정 최고 기록은 이 세션으로만 올라간다 (다시 하기 · 다음 · 종류 바꾸기마다 새로)
+  const sessionKey = bestKey(kind, mode, keyStage);
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId) startPracticeSession(sessionKey);
+  }, [roundId, sessionKey, userId]);
 
   // F5: 페이지 새로고침 대신 하던 연습을 처음부터 (Ctrl · Shift + F5 강력 새로고침은 브라우저에 맡긴다)
   const resetRef = useRef(resetRound);
@@ -210,6 +247,8 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
   const completeSentence = (value) => {
     if (result) return; // 60초가 끝난 뒤 늦게 확정된 글자
     const stats = compareInput(target, value, false);
+    // 틀린 글자를 고치지 않고 넘기면 마스코트에 반창고 하나 (덜 친 채로 넘긴 것도 포함)
+    if (stats.correctChars < target.length) setWounds((n) => Math.min(n + 1, MAX_WOUNDS));
     const nextTotals = {
       correctChars: totals.correctChars + stats.correctChars,
       correctStrokes: totals.correctStrokes + stats.correctStrokes,
@@ -217,6 +256,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     };
     setTotals(nextTotals);
     setInput('');
+    advancedAt.current = Date.now();
     composingRef.current = false;
     setIsComposing(false);
 
@@ -239,8 +279,8 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
     let value = e.target.value;
     const composing = composingRef.current || e.nativeEvent.isComposing;
 
-    // 문장을 넘기자마자 습관적으로 누른 스페이스는 무시
-    if (input === '' && value === ' ') return;
+    // 문장을 넘기자마자(0.4초 안) 습관적으로 한 번 더 누른 스페이스만 무시 — 그 뒤 스페이스는 틀린 글자로 센다
+    if (input === '' && value === ' ' && Date.now() - advancedAt.current < 400) return;
 
     // 조합 중이 아닐 때만 길이를 자른다 (조합 중에 값을 바꾸면 IME가 깨짐)
     if (!composing && value.length > target.length) {
@@ -260,7 +300,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
 
   // 한/영 자동 — keydown에서 만든 입력값을 반영한다 (입력기 대신 직접 조합)
   const applyTyped = ({ text, composing }) => {
-    if (input === '' && text === ' ') return; // 문장을 넘기자마자 습관적으로 누른 스페이스
+    if (input === '' && text === ' ' && Date.now() - advancedAt.current < 400) return; // 넘기자마자 한 번 더 누른 스페이스
     if (text.length > target.length) return; // 문장보다 길게는 못 친다
     timer.start();
     composingRef.current = composing;
@@ -416,18 +456,21 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
               timeLimit={kind === 'timed' ? TIMED_MS : null}
             />
 
-            <TypingBoard
-              target={target}
-              input={input}
-              isComposing={isComposing}
-              title={round.title}
-              titles={kind === 'long' ? passageTitles(mode) : null}
-              onTitleChange={(title, { keepFocus }) => resetRound(mode, kind, { passage: title, focus: !keepFocus })}
-              onTitleDone={focusInput}
-              upcoming={items.slice(index + 1, index + 1 + (kind === 'words' ? 5 : kind === 'long' ? 2 : 1))}
-              upcomingLayout={kind === 'words' ? 'inline' : 'lines'}
-              onClick={focusInput}
-            />
+            <div className="board-stage">
+              <TypingBoard
+                target={target}
+                input={input}
+                isComposing={isComposing}
+                title={round.title}
+                titles={kind === 'long' ? passageTitles(mode) : null}
+                onTitleChange={(title, { keepFocus }) => resetRound(mode, kind, { passage: title, focus: !keepFocus })}
+                onTitleDone={focusInput}
+                upcoming={items.slice(index + 1, index + 1 + (kind === 'words' ? 5 : kind === 'long' ? 2 : 1))}
+                upcomingLayout={kind === 'words' ? 'inline' : 'lines'}
+                onClick={focusInput}
+              />
+              <Mascot mood={mood} beat={input.length} wounds={wounds} />
+            </div>
 
             <TypingInput
               ref={inputRef}
@@ -494,6 +537,7 @@ export default function PracticeView({ mode, onModeChange, onOpenNav }) {
           result={result}
           title={resultTitle}
           nextLabel={next.label}
+          wounds={wounds}
           onRestart={() => resetRound()}
           onNext={goNext}
         />
