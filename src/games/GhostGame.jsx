@@ -14,13 +14,56 @@ import { getBest, getGameBest, getGhost, saveGameBest, saveGhost } from '../util
 import { isBetter, scoreText } from '../data/games';
 import { playKey } from '../utils/sound';
 
-// 코스는 언어마다 고정 — 기록이 도착 시간이라 판마다 문장(길이)이 바뀌면 운으로 순위가 갈린다.
-// 문장 목록에서 길이가 가운데쯤인 3개 (한글 118타 · 영어 100타). 바꾸면 기존 기록과 비교가 안 되니 COURSE_ID도 올린다.
-const COURSE = {
-  ko: ['오늘 할 일을 내일로 미루지 말자.', '천 리 길도 한 걸음부터 시작된다.', '하늘이 무너져도 솟아날 구멍이 있다.'],
-  en: ['Every expert was once a beginner.', 'Small habits lead to big changes.', 'Accuracy first, speed will follow.'],
+// 코스는 난이도 · 언어마다 고정 — 기록이 도착 시간이라 판마다 문장(길이)이 바뀌면 운으로 순위가 갈린다.
+// 어려움: 랭킹 코스 (한글 118타 · 영어 100타) — 서버(submit_score)가 이 타수로 기록을 검사하니 바꾸면 COURSE_ID와 서버 검사도 같이.
+// 쉬움: 짧은 문장 연습 코스 — 랭킹에 올리지 않는다.
+const COURSES = {
+  hard: {
+    ko: ['오늘 할 일을 내일로 미루지 말자.', '천 리 길도 한 걸음부터 시작된다.', '하늘이 무너져도 솟아날 구멍이 있다.'],
+    en: ['Every expert was once a beginner.', 'Small habits lead to big changes.', 'Accuracy first, speed will follow.'],
+  },
+  easy: {
+    ko: ['고생 끝에 낙이 온다.', '티끌 모아 태산이 된다.', '등잔 밑이 어둡다.'],
+    en: ['Practice makes perfect.', 'Time is money.', 'Fortune favors the bold.'],
+  },
 };
-const COURSE_ID = 1;
+const COURSE_ID = 1; // 어려움 코스 번호
+const LEVELS = [
+  ['easy', '쉬움'],
+  ['hard', '어려움'],
+];
+const levelName = (level) => LEVELS.find(([id]) => id === level)[1];
+const RANKED_LEVEL = 'hard'; // 랭킹에는 어려움만
+const LEVEL_KEY = 'tadak:ghost-level'; // 마지막으로 고른 난이도 (다시 하기 · F5에도 그대로)
+
+function loadLevel() {
+  try {
+    return localStorage.getItem(LEVEL_KEY) === 'easy' ? 'easy' : 'hard';
+  } catch {
+    return 'hard';
+  }
+}
+
+function saveLevel(level) {
+  try {
+    localStorage.setItem(LEVEL_KEY, level);
+  } catch {
+    // 저장 실패는 무시
+  }
+}
+
+// 유령은 난이도마다 따로 — 어려움은 예전 저장 자리(언어 이름) 그대로
+const ghostKey = (mode, level) => (level === 'hard' ? mode : `easy:${mode}`);
+
+/**
+ * 최고 기록 { score: 도착 시간(ms) } — 어려움은 게임 최고 기록(로그인하면 계정 · 랭킹 기록),
+ * 쉬움은 이 기기의 쉬움 유령(가장 빨랐던 판)
+ */
+function bestFor(mode, level) {
+  if (level === 'hard') return getGameBest(`ghost:${mode}`);
+  const ghost = getGhost(ghostKey(mode, level));
+  return ghost ? { score: Math.round(ghost.time * 1000) } : null;
+}
 const COURSE_SENTENCES = 3; // 한 판에 달리는 문장 수
 const TRACE_STEP = 0.25; // 유령 기록 간격(초)
 const DEFAULT_GHOST_SPEED = 150; // 기록이 하나도 없을 때 유령 타수 (GHOST_PACE를 곱하기 전)
@@ -72,8 +115,8 @@ function smoothTrace(trace) {
  * 이번 판 유령 —고스트 레이스에서 낸 내 최고 기록(움직임 그대로)과 단문 연습 최고 타수 중 빠른 쪽.
  * 둘 다 없으면 기본 유령. 어느 쪽이든 GHOST_PACE만큼 빠르게 (speed는 빨라진 타수)
  */
-function chooseGhost(mode) {
-  const own = getGhost(mode);
+function chooseGhost(mode, level) {
+  const own = getGhost(ghostKey(mode, level));
   const practice = getBest(mode);
   const paced = (speed) => Math.round(speed * GHOST_PACE);
   if (own && (!practice || own.speed >= practice.speed)) {
@@ -112,14 +155,14 @@ function ghostFinishTime(ghost, total) {
   return t;
 }
 
-const freshGame = (mode) => {
-  const course = COURSE[mode];
+const freshGame = (mode, level) => {
+  const course = COURSES[level][mode];
   const strokes = course.map(sentenceStrokes);
   return {
     course,
     strokes,
     total: strokes.reduce((a, b) => a + b, 0),
-    ghost: chooseGhost(mode),
+    ghost: chooseGhost(mode, level),
     index: 0,
     done: 0, // 끝낸 문장들의 타수
     mine: 0, // 지금까지 바르게 친 타수 (끝낸 문장 + 치는 중)
@@ -137,21 +180,24 @@ const freshGame = (mode) => {
  * 고스트 레이스 — 같은 문장을 내 최고 기록 '유령'과 나란히 달리며 친다.
  * 진행 막대 두 개 위에 타닥이(나)와 반투명 타닥이(유령)가 올라가 달린다.
  * 유령보다 먼저 도착하면 승리, 더 빠르면 이번 판이 다음 유령이 된다.
+ * 난이도: 쉬움(짧은 문장 · 연습용) / 어려움(랭킹 코스) — 문장 · 유령 · 최고 기록이 따로이고, 랭킹에는 어려움만 올라간다.
  */
 export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
   const [status, setStatus] = useState('ready'); // ready | countdown | playing | paused | over
+  const [level, setLevel] = useState(loadLevel); // easy | hard
   const [input, setInput] = useState('');
   const [isComposing, setIsComposing] = useState(false);
   const [isMiss, setIsMiss] = useState(false);
   const [result, setResult] = useState(null);
   const g = useRef(null);
-  if (g.current === null) g.current = freshGame(mode);
+  if (g.current === null) g.current = freshGame(mode, level);
   const [, rerender] = useReducer((x) => x + 1, 0);
   const inputRef = useRef(null);
   const composingRef = useRef(false);
   const advanceAfterCompose = useRef(false);
-  const bestKey = `ghost:${mode}`;
-  const [best, setBest] = useState(() => getGameBest(bestKey));
+  const bestKey = `ghost:${mode}`; // 어려움(랭킹) 최고 기록
+  const ranked = level === RANKED_LEVEL;
+  const [best, setBest] = useState(() => bestFor(mode, level));
 
   const game = g.current;
   const target = game.course[game.index] ?? '';
@@ -168,11 +214,20 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
   };
 
   const start = () => {
-    startGameSession('ghost', mode); // 랭킹 점수는 이 판의 서버 세션으로만 올라간다
-    g.current = freshGame(mode);
+    if (ranked) startGameSession('ghost', mode); // 랭킹 점수는 이 판의 서버 세션으로만 올라간다 (어려움만)
+    g.current = freshGame(mode, level);
     resetInput();
     setResult(null);
     setStatus('countdown');
+  };
+
+  // 시작 화면에서 난이도 바꾸기 — 코스 · 유령 · 최고 기록을 그 난이도 것으로
+  const changeLevel = (next) => {
+    if (next === level) return;
+    saveLevel(next);
+    setLevel(next);
+    g.current = freshGame(mode, next);
+    setBest(bestFor(mode, next));
   };
 
   const begin = () => {
@@ -198,14 +253,16 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
     const win = time < ghostTime;
     const plausible = speed <= MAX_PLAUSIBLE_SPEED;
     const trace = [...game.trace, game.total];
-    const newGhost = plausible && saveGhost(mode, { speed, time, strokes: game.total, trace });
-    // 기록 = 도착 시간(ms) — 유령을 이긴 판만 최고 기록 · 랭킹에 남긴다
+    const prev = bestFor(mode, level);
+    const newGhost = plausible && saveGhost(ghostKey(mode, level), { speed, time, strokes: game.total, trace });
+    // 기록 = 도착 시간(ms) — 어려움은 유령을 이긴 판만 최고 기록 · 랭킹에 남긴다
+    // 쉬움은 랭킹 없이 가장 빨랐던 판(= 새 유령)이 최고 기록
     const ms = Math.round(time * 1000);
-    const counts = win && plausible;
-    const prev = getGameBest(bestKey);
-    const isBest =
-      counts && saveGameBest(bestKey, { score: ms, level: COURSE_SENTENCES, ms: true, course: COURSE_ID }, (a, b) => isBetter('ghost', a, b));
-    if (isBest) setBest(getGameBest(bestKey));
+    const counts = ranked && win && plausible;
+    const isBest = ranked
+      ? counts && saveGameBest(bestKey, { score: ms, level: COURSE_SENTENCES, ms: true, course: COURSE_ID }, (a, b) => isBetter('ghost', a, b))
+      : newGhost;
+    if (isBest) setBest(bestFor(mode, level));
     setResult({ time, ms, speed, ghostTime, ghostSpeed: game.ghost.speed, win, newGhost, isBest, prev, plausible, counts });
     setStatus('over');
   };
@@ -319,6 +376,25 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
   else if (racing && gap > 20) mood = 'cheer';
   else if (racing) mood = 'happy';
 
+  // 시작 · 결과 창의 난이도 고르기 (낱말 언어 고르기와 같은 모양)
+  const levelPicker = (
+    <div className="lang-picker" role="group" aria-label="난이도">
+      <span className="lang-picker__label">난이도</span>
+      {LEVELS.map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          className={`lang-picker__btn ${level === id ? 'is-active' : ''}`}
+          aria-pressed={level === id}
+          onClick={() => changeLevel(id)}
+        >
+          {label}
+          {id === RANKED_LEVEL && ' 🏆'}
+        </button>
+      ))}
+    </div>
+  );
+
   const lane = (who, ratio, label, detail, children) => (
     <div className={`race-lane is-${who}`}>
       <span className="race-lane__label">{label}</span>
@@ -341,7 +417,11 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
         <GameStat label="시간" value={`${game.clock.toFixed(1)}초`} />
         <GameStat label="지금 타수" value={racing ? speed : 0} sub={`최고 ${best ? scoreText('ghost', best.score) : '없음'}`} />
         <GameStat label="유령" value={`${game.ghost.speed}타`} sub={game.ghost.source} />
-        <GameStat label="문장" value={`${Math.min(game.index + 1, COURSE_SENTENCES)}/${COURSE_SENTENCES}`} />
+        <GameStat
+          label="문장"
+          value={`${Math.min(game.index + 1, COURSE_SENTENCES)}/${COURSE_SENTENCES}`}
+          sub={ranked ? '어려움 · 랭킹' : '쉬움 · 연습'}
+        />
       </div>
 
       <div className="game__field race-field">
@@ -418,10 +498,11 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
               `이번 유령: ${game.ghost.source} ${game.ghost.speed}타`,
             ]}
             rules={[
-              ['⌨️', `늘 같은 문장 ${COURSE_SENTENCES}개 코스 — 차례로 치고 스페이스 · Enter로 다음 문장`],
+              ['⌨️', `난이도마다 늘 같은 문장 ${COURSE_SENTENCES}개 코스 — 차례로 치고 스페이스 · Enter로 다음 문장`],
+              ['🌱', '쉬움: 짧은 문장 · 연습용이라 랭킹에 올라가지 않아요'],
+              ['🔥', '어려움: 긴 문장 · 유령을 이긴 판만 도착 시간이 기록 · 랭킹에 남아요'],
               ['✏️', '오타가 있으면 막대가 멈춰요 — 고쳐야 다시 나아가요'],
-              ['🏁', '유령보다 먼저 결승선에 닿으면 승리 — 이긴 판만 도착 시간이 기록 · 랭킹에 남아요'],
-              ['👻', '더 빠르게 달리면 이번 판이 다음 판의 유령이 돼요'],
+              ['👻', '더 빠르게 달리면 이번 판이 다음 판의 유령이 돼요 (유령은 난이도마다 따로)'],
             ]}
             items={[
               {
@@ -435,6 +516,7 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
               },
             ]}
           />
+          {levelPicker}
           <LangPicker mode={mode} onModeChange={onModeChange} />
         </GameOverlay>
       )}
@@ -465,11 +547,14 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
           {result.isBest && <p className="game-overlay__best">최고 기록!</p>}
           {!result.isBest && result.prev && <p>최고 기록 {scoreText('ghost', result.prev.score)}</p>}
           <p>평균 {result.speed}타</p>
-          {result.counts ? (
+          {!ranked ? (
+            <p className="rank-note">🌱 {levelName(level)} 난이도는 연습용이라 랭킹에 올라가지 않아요 · 랭킹은 어려움에서!</p>
+          ) : result.counts ? (
             <RankNote game="ghost" mode={mode} score={result.ms} level={COURSE_SENTENCES} />
           ) : (
             result.plausible && <p className="rank-note">🏆 유령을 이기면 도착 시간이 랭킹에 올라가요</p>
           )}
+          {levelPicker}
         </GameOverlay>
       )}
     </div>
