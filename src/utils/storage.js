@@ -120,7 +120,8 @@ export function getGhost(mode) {
 /** 더 빠른 판이면 유령으로 저장하고 true */
 export function saveGhost(mode, record) {
   const all = readGhosts();
-  if (all[mode] && all[mode].speed >= record.speed) return false;
+  // 다른 코스(타수가 다른) 유령은 비교하지 않고 바꾼다
+  if (all[mode] && all[mode].strokes === record.strokes && all[mode].speed >= record.speed) return false;
   all[mode] = { ...record, date: new Date().toISOString() };
   try {
     localStorage.setItem(GHOST_KEY, JSON.stringify(all));

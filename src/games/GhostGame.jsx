@@ -55,13 +55,20 @@ function saveLevel(level) {
 // 유령은 난이도마다 따로 — 어려움은 예전 저장 자리(언어 이름) 그대로
 const ghostKey = (mode, level) => (level === 'hard' ? mode : `easy:${mode}`);
 
+/** 저장된 내 유령 — 지금 코스와 타수가 다르면(코스 문장이 바뀌기 전 기록) 없는 셈 친다 */
+function ownGhost(mode, level) {
+  const ghost = getGhost(ghostKey(mode, level));
+  const total = COURSES[level][mode].map(sentenceStrokes).reduce((a, b) => a + b, 0);
+  return ghost?.strokes === total ? ghost : null;
+}
+
 /**
  * 최고 기록 { score: 도착 시간(ms) } — 어려움은 게임 최고 기록(로그인하면 계정 · 랭킹 기록),
  * 쉬움은 이 기기의 쉬움 유령(가장 빨랐던 판)
  */
 function bestFor(mode, level) {
   if (level === 'hard') return getGameBest(`ghost:${mode}`);
-  const ghost = getGhost(ghostKey(mode, level));
+  const ghost = ownGhost(mode, level);
   return ghost ? { score: Math.round(ghost.time * 1000) } : null;
 }
 const COURSE_SENTENCES = 3; // 한 판에 달리는 문장 수
@@ -116,7 +123,7 @@ function smoothTrace(trace) {
  * 둘 다 없으면 기본 유령. 어느 쪽이든 GHOST_PACE만큼 빠르게 (speed는 빨라진 타수)
  */
 function chooseGhost(mode, level) {
-  const own = getGhost(ghostKey(mode, level));
+  const own = ownGhost(mode, level);
   const practice = getBest(mode);
   const paced = (speed) => Math.round(speed * GHOST_PACE);
   if (own && (!practice || own.speed >= practice.speed)) {
@@ -228,6 +235,9 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
     setLevel(next);
     g.current = freshGame(mode, next);
     setBest(bestFor(mode, next));
+    // 결과 창에서 바꾸면 시작 화면으로 — 끝난 판 결과 · 랭킹 안내가 새 난이도와 섞이지 않게
+    setResult(null);
+    setStatus('ready');
   };
 
   const begin = () => {
