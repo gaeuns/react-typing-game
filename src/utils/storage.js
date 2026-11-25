@@ -63,12 +63,15 @@ function readGames() {
   }
 }
 
+// 고스트 레이스 어려움 코스 번호 (언어별) — 코스 문장을 바꾸면 올린다. 한글 2: 겹받침 · 쌍자음 문장으로 교체
+export const GHOST_COURSE_ID = { ko: 2, en: 1 };
+
 /** key: `${게임}:${언어}` — { score, level, date } */
 export function getGameBest(key) {
   if (account) return account.games[key] ?? null;
   const record = readGames()[key] ?? null;
-  // 고스트 레이스는 고정 코스 도착 시간(ms) — 예전 기록(타수 · 무작위 코스, course 표시 없음)은 없는 셈 친다
-  if (key.startsWith('ghost:') && record && record.course !== 1) return null; // 1 = GhostGame.jsx의 COURSE_ID
+  // 고스트 레이스는 고정 코스 도착 시간(ms) — 지금 코스가 아닌 예전 기록(타수 · 무작위 코스 · 바뀌기 전 문장)은 없는 셈 친다
+  if (key.startsWith('ghost:') && record && record.course !== GHOST_COURSE_ID[key.slice('ghost:'.length)]) return null;
   return record;
 }
 

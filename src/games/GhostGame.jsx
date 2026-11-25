@@ -10,16 +10,17 @@ import TypingBoard from '../components/TypingBoard';
 import { calcSpeed, countStrokes } from '../utils/calculate';
 import { isPrefix, toKeystrokes } from '../utils/hangul';
 import { AUTO_LANG, applyKey } from '../utils/hangulInput';
-import { getBest, getGameBest, getGhost, saveGameBest, saveGhost } from '../utils/storage';
+import { GHOST_COURSE_ID, getBest, getGameBest, getGhost, saveGameBest, saveGhost } from '../utils/storage';
 import { isBetter, scoreText } from '../data/games';
 import { playKey } from '../utils/sound';
 
 // 코스는 난이도 · 언어마다 고정 — 기록이 도착 시간이라 판마다 문장(길이)이 바뀌면 운으로 순위가 갈린다.
-// 어려움: 랭킹 코스 (한글 118타 · 영어 100타) — 서버(submit_score)가 이 타수로 기록을 검사하니 바꾸면 COURSE_ID와 서버 검사도 같이.
+// 어려움: 랭킹 코스 (한글 145타 · 영어 100타) — 서버(submit_score)는 한글 118타 · 영어 100타 이상인 코스로 보고 너무 빠른 기록을 거절하니
+//   더 짧은 코스로 바꾸려면 서버 검사도 같이. 문장을 바꾸면 예전 기록과 비교가 안 되니 그 언어의 GHOST_COURSE_ID도 올린다.
 // 쉬움: 짧은 문장 연습 코스 — 랭킹에 올리지 않는다.
 const COURSES = {
   hard: {
-    ko: ['오늘 할 일을 내일로 미루지 말자.', '천 리 길도 한 걸음부터 시작된다.', '하늘이 무너져도 솟아날 구멍이 있다.'],
+    ko: ['얇은 귀는 남의 말에 쉽게 흔들린다.', '밝은 햇살이 넓은 들판을 고루 비춘다.', '읽고 싶은 책을 끝까지 꼼꼼히 읽어 보자.'], // 겹받침 · 쌍자음
     en: ['Every expert was once a beginner.', 'Small habits lead to big changes.', 'Accuracy first, speed will follow.'],
   },
   easy: {
@@ -27,7 +28,6 @@ const COURSES = {
     en: ['Practice makes perfect.', 'Time is money.', 'Fortune favors the bold.'],
   },
 };
-const COURSE_ID = 1; // 어려움 코스 번호
 const LEVELS = [
   ['easy', '쉬움'],
   ['hard', '어려움'],
@@ -260,7 +260,7 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
     const ms = Math.round(time * 1000);
     const counts = ranked && win && plausible;
     const isBest = ranked
-      ? counts && saveGameBest(bestKey, { score: ms, level: COURSE_SENTENCES, ms: true, course: COURSE_ID }, (a, b) => isBetter('ghost', a, b))
+      ? counts && saveGameBest(bestKey, { score: ms, level: COURSE_SENTENCES, ms: true, course: GHOST_COURSE_ID[mode] }, (a, b) => isBetter('ghost', a, b))
       : newGhost;
     if (isBest) setBest(bestFor(mode, level));
     setResult({ time, ms, speed, ghostTime, ghostSpeed: game.ghost.speed, win, newGhost, isBest, prev, plausible, counts });
