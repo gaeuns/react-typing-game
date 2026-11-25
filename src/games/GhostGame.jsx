@@ -376,7 +376,7 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
   else if (racing && gap > 20) mood = 'cheer';
   else if (racing) mood = 'happy';
 
-  // 시작 · 결과 창의 난이도 고르기 (낱말 언어 고르기와 같은 모양)
+  // 시작 · 결과 창의 난이도 고르기 (언어 고르기와 같은 모양)
   const levelPicker = (
     <div className="lang-picker" role="group" aria-label="난이도">
       <span className="lang-picker__label">난이도</span>
@@ -517,7 +517,7 @@ export default function GhostGame({ mode, autoStart, onModeChange, onExit }) {
             ]}
           />
           {levelPicker}
-          <LangPicker mode={mode} onModeChange={onModeChange} />
+          <LangPicker mode={mode} onModeChange={onModeChange} label="언어" />
         </GameOverlay>
       )}
       {status === 'countdown' && <Countdown onDone={begin} />}

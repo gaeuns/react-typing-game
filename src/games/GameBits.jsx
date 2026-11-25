@@ -40,11 +40,11 @@ export function Banner({ banner }) {
   );
 }
 
-/** 시작 화면에서 낱말 언어 고르기 */
-export function LangPicker({ mode, onModeChange }) {
+/** 시작 화면에서 낱말 언어 고르기 — label: 앞에 붙는 이름 (문장을 치는 게임은 "언어") */
+export function LangPicker({ mode, onModeChange, label = '낱말 언어' }) {
   return (
-    <div className="lang-picker" role="group" aria-label="낱말 언어">
-      <span className="lang-picker__label">낱말 언어</span>
+    <div className="lang-picker" role="group" aria-label={label}>
+      <span className="lang-picker__label">{label}</span>
       {[
         ['ko', '한글'],
         ['en', 'English'],
